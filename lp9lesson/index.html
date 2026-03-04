@@ -245,9 +245,9 @@
         <span style="font-size:13px;">$</span>
       </div>
       <div class="config-row">
-        <label>Комиссии в неделю (≈):</label>
-        <input type="number" id="c-fees" value="5" min="0" step="0.5" onchange="calcIL()">
-        <span style="font-size:13px;">$/нед</span>
+        <label>APR комиссий (≈):</label>
+        <input type="number" id="c-apr" value="20" min="0" step="1" onchange="calcIL()">
+        <span style="font-size:13px;">% годовых</span>
       </div>
       <div id="c-entry-info" style="margin-top:12px; padding:12px; background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.15); border-radius:10px; font-size:13px; line-height:1.8; text-align:center;"></div>
     </div>
@@ -602,16 +602,17 @@ function calcIL() {
   const entry = parseFloat(document.getElementById('c-entry').value) || 2500;
   const lower = parseFloat(document.getElementById('c-lower').value) || 2000;
   const upper = parseFloat(document.getElementById('c-upper').value) || 3000;
-  const feesWk = parseFloat(document.getElementById('c-fees').value) || 5;
+  const apr = parseFloat(document.getElementById('c-apr').value) || 20;
 
   if (lower >= upper) return;
   const L = calcLFromInputs();
   if (L <= 0) return;
 
   const totalIn = ethIn * entry + usdcIn;
+  const feesWk = totalIn * (apr / 100) / 52;
 
   document.getElementById('c-entry-info').innerHTML =
-    `<b>Общая стоимость позиции:</b> <b style="color:var(--accent);">${fmtI(totalIn)}</b> (${ethIn} ETH × $${entry.toLocaleString()} + ${usdcIn.toLocaleString()} USDC) &nbsp;|&nbsp; <b>L</b> = ${L.toFixed(2)}`;
+    `<b>Общая стоимость позиции:</b> <b style="color:var(--accent);">${fmtI(totalIn)}</b> (${ethIn} ETH × $${entry.toLocaleString()} + ${usdcIn.toLocaleString()} USDC) &nbsp;|&nbsp; <b>APR ${apr}%</b> ≈ ${fmt(feesWk)}/нед`;
 
   // At entry
   const e = calcILAtPrice(L, ethIn, usdcIn, entry, entry, lower, upper);
@@ -649,8 +650,10 @@ function calcSlider() {
   const entry = parseFloat(document.getElementById('c-entry').value) || 2500;
   const lower = parseFloat(document.getElementById('c-lower').value) || 2000;
   const upper = parseFloat(document.getElementById('c-upper').value) || 3000;
-  const feesWk = parseFloat(document.getElementById('c-fees').value) || 5;
+  const apr = parseFloat(document.getElementById('c-apr').value) || 20;
   const price = parseFloat(document.getElementById('c-slider').value) || 2500;
+  const totalIn = ethIn * entry + usdcIn;
+  const feesWk = totalIn * (apr / 100) / 52;
 
   document.getElementById('c-slider-display').textContent = '$' + price.toLocaleString();
 

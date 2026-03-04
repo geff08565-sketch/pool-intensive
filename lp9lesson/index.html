@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Урок 9 — Impermanent Loss: когда опасен, когда нет</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #111111; --card: #1e1e1e; --card-hover: #2a2a2a;
+    --accent: #ef4444; --accent2: #f97316; --red: #ef4444; --green: #22c55e;
+    --text: #f5f5f5; --text-dim: #9ca3af; --border: #333333;
+    --yellow: #facc15; --orange: #f97316;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Montserrat',system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; position:relative; }
+  body::before {
+    content:''; position:fixed; top:0; left:0; width:100%; height:100%;
+    background-image:url("https://page.gensparksite.com/slides_images/9c76947ae75f1735c8d0a40301471dd9.webp");
+    background-size:cover; background-position:center;
+    opacity:0.15; z-index:0; pointer-events:none;
+  }
+  body::after {
+    content:''; position:fixed; top:0; left:0; width:100%; height:100%;
+    background-color:rgba(17,17,17,0.88); z-index:0; pointer-events:none;
+  }
+  body > * { position:relative; z-index:1; }
+
+  .header { text-align:center; padding:32px 20px 16px; }
+  .header .eyebrow { color:var(--accent); font-size:13px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:8px; display:flex; align-items:center; justify-content:center; gap:8px; }
+  .header h1 { font-size:28px; font-weight:800; color:#fff; letter-spacing:-0.01em; text-shadow:0 2px 12px rgba(0,0,0,0.5); }
+
+  .tabs { display:flex; justify-content:center; gap:8px; padding:16px 20px; flex-wrap:wrap; }
+  .tab-btn { padding:10px 24px; border:1px solid var(--border); border-radius:12px; background:var(--card); color:var(--text-dim); cursor:pointer; font-size:15px; font-weight:500; transition:all 0.2s; }
+  .tab-btn:hover { background:var(--card-hover); color:var(--text); }
+  .tab-btn.active { background:var(--accent); color:white; border-color:var(--accent); font-weight:700; }
+  .tab-content { display:none; padding:0 20px 40px; max-width:1300px; margin:0 auto; }
+  .tab-content.active { display:block; }
+
+  .scene { border-radius:20px; padding:30px; background:linear-gradient(180deg,#1f1f1f,#171717); }
+  .scene-title { text-align:center; font-size:20px; font-weight:600; margin-bottom:8px; }
+  .scene-sub { text-align:center; color:var(--text-dim); font-size:14px; margin-bottom:24px; }
+
+  .panel { background:var(--card); border-radius:16px; padding:24px; border:1px solid var(--border); }
+  .panel h3 { font-size:17px; margin-bottom:16px; }
+  .panel-label { display:inline-block; font-size:11px; font-weight:700; padding:3px 10px; border-radius:6px; margin-bottom:12px; text-transform:uppercase; letter-spacing:0.5px; }
+
+  .side-by-side { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  @media(max-width:900px) { .side-by-side { grid-template-columns:1fr; } }
+
+  .hint-box { margin-top:20px; padding:16px 20px; border-radius:12px; font-size:14px; text-align:center; }
+  .hint-yellow { background:rgba(250,204,21,0.08); border:1px solid rgba(250,204,21,0.2); color:var(--yellow); }
+  .hint-red { background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.2); color:#fca5a5; }
+  .hint-green { background:rgba(34,197,94,0.08); border:1px solid rgba(34,197,94,0.2); color:var(--green); }
+
+  .btn { padding:12px 32px; border:none; border-radius:12px; font-size:15px; font-weight:600; cursor:pointer; transition:all 0.2s; }
+  .btn:hover { transform:translateY(-1px); }
+  .btn-accent { background:var(--accent); color:white; font-weight:700; }
+  .btn-reset { background:var(--card); color:var(--text-dim); border:1px solid var(--border); padding:10px 20px; font-size:13px; }
+
+  .config-section { background:var(--card); border-radius:16px; padding:20px; margin-top:24px; }
+  .config-section h3 { font-size:16px; margin-bottom:14px; }
+  .config-row { display:flex; align-items:center; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
+  .config-row label { font-size:13px; color:var(--text-dim); min-width:160px; }
+  input[type=number] { padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:14px; width:100px; text-align:center; font-family:'Montserrat',sans-serif; }
+
+  .price-slider-wrap { margin:0 20px; }
+  .price-slider { width:100%; -webkit-appearance:none; height:6px; border-radius:3px; background:linear-gradient(90deg,var(--red),var(--yellow),var(--green),var(--yellow),var(--red)); outline:none; cursor:pointer; }
+  .price-slider::-webkit-slider-thumb { -webkit-appearance:none; width:24px; height:24px; border-radius:50%; background:white; border:3px solid var(--accent); cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.3); }
+  .price-labels { display:flex; justify-content:space-between; margin:4px 20px 0; font-size:11px; color:var(--text-dim); }
+
+  .status-badge { display:inline-block; padding:8px 16px; border-radius:8px; font-weight:600; font-size:14px; text-align:center; width:100%; }
+
+  /* Person cards */
+  .person { text-align:center; }
+  .person-avatar { font-size:48px; margin-bottom:8px; }
+  .person-name { font-size:16px; font-weight:700; margin-bottom:4px; }
+  .person-role { font-size:12px; color:var(--text-dim); margin-bottom:16px; }
+  .person-value { font-size:32px; font-weight:800; margin:8px 0; }
+  .person-detail { font-size:13px; color:var(--text-dim); line-height:1.8; }
+
+  /* IL bar */
+  .il-bar-wrap { margin:24px 0; text-align:center; }
+  .il-bar { height:40px; border-radius:10px; overflow:hidden; display:flex; position:relative; border:1px solid var(--border); }
+  .il-bar-hodl { background:rgba(34,197,94,0.3); transition:width 0.3s; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; }
+  .il-bar-pool { background:rgba(239,68,68,0.3); transition:width 0.3s; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; }
+  .il-bar-gap { background:rgba(250,204,21,0.3); transition:width 0.3s; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:var(--yellow); }
+
+  /* Compare cards row */
+  .compare-row { display:grid; grid-template-columns:1fr auto 1fr; gap:16px; align-items:start; margin-top:24px; }
+  @media(max-width:800px) { .compare-row { grid-template-columns:1fr; } }
+  .il-arrow { display:flex; flex-direction:column; align-items:center; justify-content:center; padding-top:60px; }
+  .il-amount { font-size:28px; font-weight:800; color:var(--yellow); }
+  .il-pct { font-size:14px; color:var(--text-dim); }
+
+  /* Cards for tab 3 */
+  .danger-card { background:var(--card); border:1px solid rgba(239,68,68,0.3); border-radius:16px; padding:20px; }
+  .safe-card { background:var(--card); border:1px solid rgba(34,197,94,0.3); border-radius:16px; padding:20px; }
+  .card-item { padding:10px 0; border-bottom:1px solid var(--border); font-size:14px; line-height:1.6; }
+  .card-item:last-child { border-bottom:none; }
+
+  .formula-box { background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.15); border-radius:10px; padding:12px; font-size:13px; line-height:1.8; text-align:center; margin-top:16px; }
+
+  @keyframes slideIn { from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);} }
+  .slide-in { animation:slideIn 0.4s ease-out; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="eyebrow"><i class="fa-solid fa-circle" style="font-size:8px;"></i> Урок 9 · Модуль «Механика»</div>
+  <h1>Impermanent Loss: когда опасен, когда нет</h1>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('story',this)">👥 Дима vs Саша</button>
+  <button class="tab-btn" onclick="switchTab('calc',this)">📝 Мой IL-калькулятор</button>
+  <button class="tab-btn" onclick="switchTab('guide',this)">⚖️ Когда опасен, когда нет</button>
+</div>
+
+<!-- ==================== ТАБ 1: ДИМА vs САША ==================== -->
+<div id="tab-story" class="tab-content active">
+  <div class="scene">
+    <div class="scene-title">👥 Холд vs Пул — кто заработал больше?</div>
+    <div class="scene-sub">Двигай цену — смотри как расходятся результаты Димы и Саши</div>
+
+    <div class="config-section" style="margin-top:0;">
+      <div style="display:flex; gap:24px; flex-wrap:wrap; justify-content:center; align-items:center;">
+        <div>Стартовый депозит: <b>$1,000</b> (0.2 ETH + 500 USDC)</div>
+        <div>Цена входа ETH: <b>$2,500</b></div>
+        <div>Диапазон: <b>$1,500 – $4,000</b> (V3)</div>
+      </div>
+    </div>
+
+    <!-- Price slider -->
+    <div style="text-align:center; font-size:20px; margin:24px 0 8px;">
+      Цена ETH: <b style="color:var(--yellow);" id="s1-price-display">$2,500</b>
+      <span style="font-size:14px; color:var(--text-dim); margin-left:8px;" id="s1-change">(0%)</span>
+    </div>
+    <div class="price-slider-wrap">
+      <input type="range" class="price-slider" id="s1-slider" min="500" max="5000" value="2500" step="10" oninput="updateStory()">
+    </div>
+    <div class="price-labels"><span>$500</span><span>$5,000</span></div>
+
+    <!-- Two persons -->
+    <div class="compare-row">
+      <!-- Дима: HODL -->
+      <div class="panel person">
+        <div class="person-avatar">🧑</div>
+        <div class="person-name">Дима</div>
+        <div class="person-role">Просто держит (HODL)</div>
+        <div class="person-value" style="color:var(--green);" id="s1-hodl-value">$1,000</div>
+        <div class="person-detail">
+          <div>0.2 ETH = <b id="s1-hodl-eth-usd">$500</b></div>
+          <div>500 USDC = <b>$500</b></div>
+          <div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border);">
+            Прибыль: <b id="s1-hodl-profit" style="color:var(--green);">$0</b>
+          </div>
+        </div>
+      </div>
+
+      <!-- IL arrow -->
+      <div class="il-arrow">
+        <div style="font-size:13px; color:var(--text-dim); margin-bottom:8px;">IL</div>
+        <div class="il-amount" id="s1-il-amount">$0</div>
+        <div class="il-pct" id="s1-il-pct">0%</div>
+        <div style="font-size:32px; margin:8px 0;">↔</div>
+        <div style="font-size:12px; color:var(--text-dim);">Разница</div>
+      </div>
+
+      <!-- Саша: Pool -->
+      <div class="panel person">
+        <div class="person-avatar">👨</div>
+        <div class="person-name">Саша</div>
+        <div class="person-role">Положил в пул V3</div>
+        <div class="person-value" style="color:var(--accent);" id="s1-pool-value">$1,000</div>
+        <div class="person-detail">
+          <div><span id="s1-pool-eth">0.2000</span> ETH = <b id="s1-pool-eth-usd">$500</b></div>
+          <div><span id="s1-pool-usdc">500.00</span> USDC</div>
+          <div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border);">
+            Прибыль без комиссий: <b id="s1-pool-profit" style="color:var(--accent);">$0</b>
+          </div>
+          <div style="margin-top:4px;">
+            + комиссии (~$25/мес): <b id="s1-pool-with-fees" style="color:var(--green);">$0</b>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Visual IL bar -->
+    <div class="il-bar-wrap">
+      <div style="font-size:13px; color:var(--text-dim); margin-bottom:8px;">Визуальное сравнение</div>
+      <div class="il-bar">
+        <div class="il-bar-hodl" id="s1-bar-hodl" style="width:50%;">HODL</div>
+        <div class="il-bar-gap" id="s1-bar-gap" style="width:0%;">IL</div>
+        <div class="il-bar-pool" id="s1-bar-pool" style="width:50%;">Пул</div>
+      </div>
+    </div>
+
+    <div class="hint-box hint-yellow">
+      💡 <b>Impermanent Loss</b> — это НЕ убыток. Это разница между «держать» и «положить в пул». Пул всегда чуть отстаёт, потому что автоматически продаёт растущий актив. Но комиссии могут это перекрыть!
+    </div>
+
+    <!-- Preset buttons -->
+    <div style="display:flex; justify-content:center; gap:12px; margin-top:16px; flex-wrap:wrap;">
+      <button class="btn-reset" onclick="setStoryPrice(2500)">Цена входа ($2,500)</button>
+      <button class="btn-reset" onclick="setStoryPrice(3500)">+40% ($3,500)</button>
+      <button class="btn-reset" onclick="setStoryPrice(1500)">-40% ($1,500)</button>
+      <button class="btn-reset" onclick="setStoryPrice(4000)">Верх диапазона ($4,000)</button>
+      <button class="btn-reset" onclick="setStoryPrice(1000)">Обвал ($1,000)</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== ТАБ 2: IL КАЛЬКУЛЯТОР ==================== -->
+<div id="tab-calc" class="tab-content">
+  <div class="scene">
+    <div class="scene-title">📝 Рассчитай IL своей позиции</div>
+    <div class="scene-sub">Введи данные — посмотри Impermanent Loss при разных ценах</div>
+
+    <div class="config-section" style="margin-top:0;">
+      <h3>⚙️ Твоя позиция</h3>
+      <div class="config-row">
+        <label>Внёс ETH:</label>
+        <input type="number" id="c-eth" value="0.5" min="0" step="0.001" onchange="calcIL()">
+      </div>
+      <div class="config-row">
+        <label>Внёс USDC:</label>
+        <input type="number" id="c-usdc" value="1250" min="0" step="1" onchange="calcIL()">
+      </div>
+      <div class="config-row">
+        <label>Цена ETH при входе:</label>
+        <input type="number" id="c-entry" value="2500" min="1" step="1" onchange="calcIL()">
+        <span style="font-size:13px;">$</span>
+      </div>
+      <div class="config-row">
+        <label>Нижняя граница:</label>
+        <input type="number" id="c-lower" value="2000" min="1" step="10" onchange="calcIL()">
+        <span style="font-size:13px;">$</span>
+      </div>
+      <div class="config-row">
+        <label>Верхняя граница:</label>
+        <input type="number" id="c-upper" value="3000" min="1" step="10" onchange="calcIL()">
+        <span style="font-size:13px;">$</span>
+      </div>
+      <div class="config-row">
+        <label>Комиссии в неделю (≈):</label>
+        <input type="number" id="c-fees" value="5" min="0" step="0.5" onchange="calcIL()">
+        <span style="font-size:13px;">$/нед</span>
+      </div>
+      <div id="c-entry-info" style="margin-top:12px; padding:12px; background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.15); border-radius:10px; font-size:13px; line-height:1.8; text-align:center;"></div>
+    </div>
+
+    <!-- 3 scenario cards -->
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-top:24px;">
+
+      <!-- Entry -->
+      <div class="panel" style="border-color:rgba(239,68,68,0.3);">
+        <div style="text-align:center;">
+          <div class="panel-label" style="background:var(--accent);color:#fff;">ПРИ ВХОДЕ</div>
+          <h3 style="margin-top:8px;">📍 <span id="c0-price">$2,500</span></h3>
+          <div style="font-size:14px; line-height:2; margin-top:12px;">
+            <div>HODL: <b id="c0-hodl">$2,500</b></div>
+            <div>Пул: <b id="c0-pool">$2,500</b></div>
+            <div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border);">
+              IL: <b id="c0-il" style="color:var(--yellow);">$0 (0%)</b>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- +30% -->
+      <div class="panel" style="border-color:rgba(34,197,94,0.3);">
+        <div style="text-align:center;">
+          <div class="panel-label" style="background:var(--green);color:#000;">ЦЕНА +30% ↑</div>
+          <h3 style="margin-top:8px;">📈 <span id="cup-price">$3,250</span></h3>
+          <div style="font-size:14px; line-height:2; margin-top:12px;">
+            <div>HODL: <b id="cup-hodl">$0</b></div>
+            <div>Пул: <b id="cup-pool">$0</b></div>
+            <div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border);">
+              IL: <b id="cup-il" style="color:var(--yellow);">$0 (0%)</b>
+            </div>
+            <div style="margin-top:4px; font-size:13px;">
+              Окупится за: <b id="cup-weeks" style="color:var(--green);">0 нед</b>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- -30% -->
+      <div class="panel" style="border-color:rgba(239,68,68,0.3);">
+        <div style="text-align:center;">
+          <div class="panel-label" style="background:var(--red);color:#fff;">ЦЕНА -30% ↓</div>
+          <h3 style="margin-top:8px;">📉 <span id="cdn-price">$1,750</span></h3>
+          <div style="font-size:14px; line-height:2; margin-top:12px;">
+            <div>HODL: <b id="cdn-hodl">$0</b></div>
+            <div>Пул: <b id="cdn-pool">$0</b></div>
+            <div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border);">
+              IL: <b id="cdn-il" style="color:var(--yellow);">$0 (0%)</b>
+            </div>
+            <div style="margin-top:4px; font-size:13px;">
+              Окупится за: <b id="cdn-weeks" style="color:var(--green);">0 нед</b>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Custom price slider -->
+    <div class="panel" style="margin-top:24px;">
+      <h3>🔍 Двигай цену — смотри IL в реалтайме</h3>
+      <div style="text-align:center; font-size:18px; margin-bottom:12px;">
+        Цена ETH: <b style="color:var(--yellow);" id="c-slider-display">$2,500</b>
+      </div>
+      <div class="price-slider-wrap">
+        <input type="range" class="price-slider" id="c-slider" min="500" max="5000" value="2500" step="10" oninput="calcSlider()">
+      </div>
+      <div class="price-labels"><span>$500</span><span>$5,000</span></div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-top:20px; text-align:center;">
+        <div>
+          <div style="font-size:12px; color:var(--text-dim);">HODL</div>
+          <div style="font-size:24px; font-weight:800; color:var(--green);" id="cs-hodl">$2,500</div>
+        </div>
+        <div>
+          <div style="font-size:12px; color:var(--text-dim);">IL</div>
+          <div style="font-size:24px; font-weight:800; color:var(--yellow);" id="cs-il">$0</div>
+          <div style="font-size:12px; color:var(--text-dim);" id="cs-il-pct">0%</div>
+          <div style="font-size:12px; margin-top:4px;" id="cs-weeks">Окупится за: 0 нед</div>
+        </div>
+        <div>
+          <div style="font-size:12px; color:var(--text-dim);">Пул</div>
+          <div style="font-size:24px; font-weight:800; color:var(--accent);" id="cs-pool">$2,500</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="formula-box" style="margin-top:24px;">
+      <div style="color:var(--text-dim); font-size:11px; margin-bottom:6px;">📐 Формула IL:</div>
+      <div style="font-size:13px; line-height:2;">
+        <b>IL</b> = Стоимость HODL − Стоимость пула (при той же цене)<br>
+        <b>HODL</b> = кол-во ETH × новая цена + кол-во USDC<br>
+        <b>Пул</b> = рассчитывается по формулам V3 (√P, L, границы диапазона)
+      </div>
+    </div>
+
+    <div class="hint-box hint-yellow" style="margin-top:24px;">
+      💡 <b>Домашнее задание:</b> Введи параметры СВОЕЙ позиции из Урока 5. Посчитай IL при +30% и -30%. Запиши сколько недель нужно для покрытия IL комиссиями. Скриншот → в личку.
+    </div>
+  </div>
+</div>
+
+<!-- ==================== ТАБ 3: КОГДА ОПАСЕН, КОГДА НЕТ ==================== -->
+<div id="tab-guide" class="tab-content">
+  <div class="scene">
+    <div class="scene-title">⚖️ Когда IL опасен, а когда — нет</div>
+    <div class="scene-sub">Не все пулы одинаковые. Вот как оценить риск</div>
+
+    <div class="side-by-side">
+      <!-- Опасно -->
+      <div class="danger-card">
+        <h3 style="margin-bottom:16px;">🔴 Когда IL опасен</h3>
+        <div class="card-item">
+          <b>Волатильные пары</b><br>
+          ETH/мемкоин — цена может упасть на 90%. IL будет огромным.
+        </div>
+        <div class="card-item">
+          <b>Узкий диапазон + резкое движение</b><br>
+          Позиция выходит из диапазона → ты остаёшься с одним токеном, комиссии = 0.
+        </div>
+        <div class="card-item">
+          <b>Актив «умер»</b><br>
+          Скам, проект закрылся → 100% потеря одного токена. IL = катастрофа.
+        </div>
+        <div class="card-item">
+          <b>Короткий горизонт</b><br>
+          Зашёл на 1-2 дня → комиссии не успеют перекрыть IL.
+        </div>
+      </div>
+
+      <!-- Не страшно -->
+      <div class="safe-card">
+        <h3 style="margin-bottom:16px;">🟢 Когда IL не страшен</h3>
+        <div class="card-item">
+          <b>Стейбл-пулы (USDC/USDT)</b><br>
+          Оба токена ≈ $1, IL практически 0. Доходность 1-8% — но стабильная.
+        </div>
+        <div class="card-item">
+          <b>Крупные пары (ETH/USDC)</b><br>
+          IL управляемый, комиссии компенсируют. Основной рабочий вариант.
+        </div>
+        <div class="card-item">
+          <b>Широкий диапазон</b><br>
+          Чем шире — тем меньше IL. Компромисс: меньше комиссий, но спокойнее.
+        </div>
+        <div class="card-item">
+          <b>Длинный горизонт</b><br>
+          Месяцы в пуле → комиссии накапливаются → перекрывают IL.
+        </div>
+      </div>
+    </div>
+
+    <!-- Honest comparison -->
+    <div class="panel" style="margin-top:24px;">
+      <h3>🤔 «А что если просто держать?»</h3>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:12px;">
+        <div class="card-item">
+          <b style="color:var(--green);">HODL лучше, если:</b><br>
+          Актив сделал x2-x5 без откатов. Ты бы заработал больше без пула.
+        </div>
+        <div class="card-item">
+          <b style="color:var(--accent);">Пул лучше, если:</b><br>
+          Цена ходит в диапазоне — ты зарабатываешь комиссии на каждом движении.
+        </div>
+        <div class="card-item">
+          <b style="color:var(--accent);">Пул ВСЕГДА лучше на стейблах:</b><br>
+          HODL USDC = 0% годовых. Пул USDC/USDT = 5-8% годовых.
+        </div>
+        <div class="card-item">
+          <b style="color:var(--yellow);">Нет универсального ответа:</b><br>
+          Зависит от актива, стратегии и горизонта. Поэтому следующий урок — про стратегию выбора.
+        </div>
+      </div>
+    </div>
+
+    <!-- Почему "непостоянный" -->
+    <div class="hint-box hint-green" style="margin-top:24px;">
+      💡 <b>Почему «Impermanent» — непостоянный?</b><br>
+      IL фиксируется ТОЛЬКО когда закрываешь позицию. Если цена вернулась к цене входа → IL = 0.<br>
+      Аналогия: квартира подешевела на 10%, но ты не продаёшь → убытка нет.
+    </div>
+
+    <!-- Точка безубыточности -->
+    <div class="panel" style="margin-top:24px;">
+      <h3>🎯 Точка безубыточности</h3>
+      <div style="font-size:14px; line-height:1.8;">
+        <p>Вопрос: <b>сколько комиссий нужно заработать, чтобы перекрыть IL?</b></p>
+        <p style="margin-top:8px;">Формула простая: если IL = $20, а комиссии = $5/неделю → через <b>4 недели</b> ты в плюсе.</p>
+        <p style="margin-top:8px;">Чем дольше держишь позицию → тем больше комиссий → тем вероятнее перекрыть IL.</p>
+        <p style="margin-top:8px; color:var(--yellow);"><b>Поэтому пулы — это не про «зашёл на день». Это про недели и месяцы.</b></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// TAB SWITCHING
+// ============================================================
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ============================================================
+// TAB 1: DIMA vs SASHA (STORY)
+// ============================================================
+const STORY_ETH = 0.2;
+const STORY_USDC = 500;
+const STORY_ENTRY = 2500;
+const STORY_LOWER = 1500;
+const STORY_UPPER = 4000;
+const STORY_DEPOSIT = 1000;
+const STORY_FEES = 25; // per month
+
+// Calculate L for story
+function storyL() {
+  const sqrtP = Math.sqrt(STORY_ENTRY);
+  const sqrtPa = Math.sqrt(STORY_LOWER);
+  const sqrtPb = Math.sqrt(STORY_UPPER);
+  const ethDenom = 1/sqrtP - 1/sqrtPb;
+  const usdcDenom = sqrtP - sqrtPa;
+  const L_eth = ethDenom > 0 ? STORY_ETH / ethDenom : 0;
+  const L_usdc = usdcDenom > 0 ? STORY_USDC / usdcDenom : 0;
+  return (L_eth + L_usdc) / 2;
+}
+
+const S_L = storyL();
+
+function v3AtPrice(L, price, lower, upper) {
+  const sqrtP = Math.sqrt(price);
+  const sqrtPa = Math.sqrt(lower);
+  const sqrtPb = Math.sqrt(upper);
+  let eth, usdc;
+  if (price <= lower) { eth = L * (1/sqrtPa - 1/sqrtPb); usdc = 0; }
+  else if (price >= upper) { eth = 0; usdc = L * (sqrtPb - sqrtPa); }
+  else { eth = L * (1/sqrtP - 1/sqrtPb); usdc = L * (sqrtP - sqrtPa); }
+  return { eth: Math.max(0, eth), usdc: Math.max(0, usdc), total: Math.max(0, eth) * price + Math.max(0, usdc) };
+}
+
+function updateStory() {
+  const price = parseFloat(document.getElementById('s1-slider').value);
+  const changePct = ((price - STORY_ENTRY) / STORY_ENTRY * 100).toFixed(1);
+
+  document.getElementById('s1-price-display').textContent = '$' + price.toLocaleString();
+  document.getElementById('s1-change').textContent = '(' + (changePct >= 0 ? '+' : '') + changePct + '%)';
+
+  // HODL
+  const hodlValue = STORY_ETH * price + STORY_USDC;
+  const hodlProfit = hodlValue - STORY_DEPOSIT;
+  document.getElementById('s1-hodl-value').textContent = '$' + hodlValue.toLocaleString(undefined,{maximumFractionDigits:0});
+  document.getElementById('s1-hodl-eth-usd').textContent = '$' + (STORY_ETH * price).toLocaleString(undefined,{maximumFractionDigits:0});
+  document.getElementById('s1-hodl-profit').textContent = (hodlProfit >= 0 ? '+' : '') + '$' + hodlProfit.toLocaleString(undefined,{maximumFractionDigits:0});
+  document.getElementById('s1-hodl-profit').style.color = hodlProfit >= 0 ? 'var(--green)' : 'var(--red)';
+
+  // Pool
+  const pool = v3AtPrice(S_L, price, STORY_LOWER, STORY_UPPER);
+  const poolProfit = pool.total - STORY_DEPOSIT;
+  document.getElementById('s1-pool-value').textContent = '$' + pool.total.toLocaleString(undefined,{maximumFractionDigits:0});
+  document.getElementById('s1-pool-eth').textContent = pool.eth.toFixed(4);
+  document.getElementById('s1-pool-eth-usd').textContent = '$' + (pool.eth * price).toLocaleString(undefined,{maximumFractionDigits:0});
+  document.getElementById('s1-pool-usdc').textContent = pool.usdc.toFixed(2);
+  document.getElementById('s1-pool-profit').textContent = (poolProfit >= 0 ? '+' : '') + '$' + poolProfit.toLocaleString(undefined,{maximumFractionDigits:0});
+  document.getElementById('s1-pool-profit').style.color = poolProfit >= 0 ? 'var(--green)' : 'var(--red)';
+
+  const withFees = poolProfit + STORY_FEES;
+  document.getElementById('s1-pool-with-fees').textContent = (withFees >= 0 ? '+' : '') + '$' + withFees.toLocaleString(undefined,{maximumFractionDigits:0});
+  document.getElementById('s1-pool-with-fees').style.color = withFees >= 0 ? 'var(--green)' : 'var(--red)';
+
+  // IL
+  const il = Math.max(0, hodlValue - pool.total);
+  const ilPct = hodlValue > 0 ? (il / hodlValue * 100) : 0;
+  document.getElementById('s1-il-amount').textContent = '$' + il.toLocaleString(undefined,{maximumFractionDigits:0});
+  document.getElementById('s1-il-pct').textContent = ilPct.toFixed(1) + '%';
+
+  // Bar
+  const maxVal = Math.max(hodlValue, pool.total, 1);
+  const hodlW = hodlValue / maxVal * 100;
+  const poolW = pool.total / maxVal * 100;
+  if (hodlValue >= pool.total) {
+    document.getElementById('s1-bar-hodl').style.width = poolW + '%';
+    document.getElementById('s1-bar-gap').style.width = (hodlW - poolW) + '%';
+    document.getElementById('s1-bar-pool').style.width = '0%';
+    document.getElementById('s1-bar-hodl').textContent = 'Оба: $' + pool.total.toLocaleString(undefined,{maximumFractionDigits:0});
+    document.getElementById('s1-bar-gap').textContent = il > 1 ? 'IL: $' + il.toFixed(0) : '';
+    document.getElementById('s1-bar-pool').textContent = '';
+  } else {
+    document.getElementById('s1-bar-hodl').style.width = hodlW + '%';
+    document.getElementById('s1-bar-gap').style.width = '0%';
+    document.getElementById('s1-bar-pool').style.width = (poolW - hodlW) + '%';
+    document.getElementById('s1-bar-hodl').textContent = 'HODL: $' + hodlValue.toFixed(0);
+    document.getElementById('s1-bar-gap').textContent = '';
+    document.getElementById('s1-bar-pool').textContent = 'Пул +$' + (pool.total - hodlValue).toFixed(0);
+  }
+}
+
+function setStoryPrice(p) {
+  document.getElementById('s1-slider').value = p;
+  updateStory();
+}
+
+// ============================================================
+// TAB 2: IL CALCULATOR
+// ============================================================
+function calcLFromInputs() {
+  const ethIn = parseFloat(document.getElementById('c-eth').value) || 0;
+  const usdcIn = parseFloat(document.getElementById('c-usdc').value) || 0;
+  const entry = parseFloat(document.getElementById('c-entry').value) || 2500;
+  const lower = parseFloat(document.getElementById('c-lower').value) || 2000;
+  const upper = parseFloat(document.getElementById('c-upper').value) || 3000;
+
+  const sqrtP = Math.sqrt(entry);
+  const sqrtPa = Math.sqrt(lower);
+  const sqrtPb = Math.sqrt(upper);
+
+  let L_eth = 0, L_usdc = 0, count = 0;
+
+  if (entry <= lower) {
+    const d = 1/sqrtPa - 1/sqrtPb;
+    return d > 0 && ethIn > 0 ? ethIn / d : 0;
+  }
+  if (entry >= upper) {
+    const d = sqrtPb - sqrtPa;
+    return d > 0 && usdcIn > 0 ? usdcIn / d : 0;
+  }
+
+  const ed = 1/sqrtP - 1/sqrtPb;
+  const ud = sqrtP - sqrtPa;
+  if (ed > 0 && ethIn > 0) { L_eth = ethIn / ed; count++; }
+  if (ud > 0 && usdcIn > 0) { L_usdc = usdcIn / ud; count++; }
+  if (count === 2) return (L_eth + L_usdc) / 2;
+  return L_eth || L_usdc;
+}
+
+function calcILAtPrice(L, ethIn, usdcIn, entry, price, lower, upper) {
+  const hodl = ethIn * price + usdcIn;
+  const pool = v3AtPrice(L, price, lower, upper);
+  const il = Math.max(0, hodl - pool.total);
+  const ilPct = hodl > 0 ? il / hodl * 100 : 0;
+  return { hodl, poolTotal: pool.total, il, ilPct };
+}
+
+function fmt(n) { return '$' + n.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2}); }
+function fmtI(n) { return '$' + n.toLocaleString(undefined,{maximumFractionDigits:0}); }
+
+function calcIL() {
+  const ethIn = parseFloat(document.getElementById('c-eth').value) || 0;
+  const usdcIn = parseFloat(document.getElementById('c-usdc').value) || 0;
+  const entry = parseFloat(document.getElementById('c-entry').value) || 2500;
+  const lower = parseFloat(document.getElementById('c-lower').value) || 2000;
+  const upper = parseFloat(document.getElementById('c-upper').value) || 3000;
+  const feesWk = parseFloat(document.getElementById('c-fees').value) || 5;
+
+  if (lower >= upper) return;
+  const L = calcLFromInputs();
+  if (L <= 0) return;
+
+  const totalIn = ethIn * entry + usdcIn;
+
+  document.getElementById('c-entry-info').innerHTML =
+    `<b>Общая стоимость позиции:</b> <b style="color:var(--accent);">${fmtI(totalIn)}</b> (${ethIn} ETH × $${entry.toLocaleString()} + ${usdcIn.toLocaleString()} USDC) &nbsp;|&nbsp; <b>L</b> = ${L.toFixed(2)}`;
+
+  // At entry
+  const e = calcILAtPrice(L, ethIn, usdcIn, entry, entry, lower, upper);
+  document.getElementById('c0-price').textContent = fmtI(entry);
+  document.getElementById('c0-hodl').textContent = fmtI(e.hodl);
+  document.getElementById('c0-pool').textContent = fmtI(e.poolTotal);
+  document.getElementById('c0-il').textContent = fmtI(e.il) + ' (' + e.ilPct.toFixed(1) + '%)';
+
+  // +30%
+  const pUp = entry * 1.3;
+  const u = calcILAtPrice(L, ethIn, usdcIn, entry, pUp, lower, upper);
+  document.getElementById('cup-price').textContent = fmtI(pUp);
+  document.getElementById('cup-hodl').textContent = fmtI(u.hodl);
+  document.getElementById('cup-pool').textContent = fmtI(u.poolTotal);
+  document.getElementById('cup-il').textContent = fmtI(u.il) + ' (' + u.ilPct.toFixed(1) + '%)';
+  const weeksUp = feesWk > 0 ? Math.ceil(u.il / feesWk) : '∞';
+  document.getElementById('cup-weeks').textContent = weeksUp + ' нед';
+
+  // -30%
+  const pDn = entry * 0.7;
+  const d = calcILAtPrice(L, ethIn, usdcIn, entry, pDn, lower, upper);
+  document.getElementById('cdn-price').textContent = fmtI(pDn);
+  document.getElementById('cdn-hodl').textContent = fmtI(d.hodl);
+  document.getElementById('cdn-pool').textContent = fmtI(d.poolTotal);
+  document.getElementById('cdn-il').textContent = fmtI(d.il) + ' (' + d.ilPct.toFixed(1) + '%)';
+  const weeksDn = feesWk > 0 ? Math.ceil(d.il / feesWk) : '∞';
+  document.getElementById('cdn-weeks').textContent = weeksDn + ' нед';
+
+  calcSlider();
+}
+
+function calcSlider() {
+  const ethIn = parseFloat(document.getElementById('c-eth').value) || 0;
+  const usdcIn = parseFloat(document.getElementById('c-usdc').value) || 0;
+  const entry = parseFloat(document.getElementById('c-entry').value) || 2500;
+  const lower = parseFloat(document.getElementById('c-lower').value) || 2000;
+  const upper = parseFloat(document.getElementById('c-upper').value) || 3000;
+  const feesWk = parseFloat(document.getElementById('c-fees').value) || 5;
+  const price = parseFloat(document.getElementById('c-slider').value) || 2500;
+
+  document.getElementById('c-slider-display').textContent = '$' + price.toLocaleString();
+
+  const L = calcLFromInputs();
+  if (L <= 0) return;
+
+  const r = calcILAtPrice(L, ethIn, usdcIn, entry, price, lower, upper);
+
+  document.getElementById('cs-hodl').textContent = fmtI(r.hodl);
+  document.getElementById('cs-pool').textContent = fmtI(r.poolTotal);
+  document.getElementById('cs-il').textContent = fmtI(r.il);
+  document.getElementById('cs-il-pct').textContent = r.ilPct.toFixed(1) + '%';
+  const wks = feesWk > 0 && r.il > 0 ? Math.ceil(r.il / feesWk) + ' нед' : r.il === 0 ? '—' : '∞';
+  document.getElementById('cs-weeks').textContent = 'Окупится за: ' + wks;
+}
+
+// ============================================================
+// INIT
+// ============================================================
+updateStory();
+calcIL();
+</script>
+</body>
+</html>

@@ -114,7 +114,7 @@
 </div>
 
 <div class="tabs">
-  <button class="tab-btn active" onclick="switchTab('story',this)">👥 Дима vs Саша</button>
+  <button class="tab-btn active" onclick="switchTab('story',this)">📊 HODL vs Пул</button>
   <button class="tab-btn" onclick="switchTab('calc',this)">📝 Мой IL-калькулятор</button>
   <button class="tab-btn" onclick="switchTab('guide',this)">⚖️ Когда опасен, когда нет</button>
 </div>
@@ -318,20 +318,39 @@
       </div>
       <div class="price-labels"><span>$500</span><span>$5,000</span></div>
 
-      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-top:20px; text-align:center;">
-        <div>
-          <div style="font-size:12px; color:var(--text-dim);">HODL</div>
-          <div style="font-size:24px; font-weight:800; color:var(--green);" id="cs-hodl">$2,500</div>
+      <!-- Detailed comparison like tab 1 -->
+      <div class="compare-row" style="margin-top:20px;">
+        <!-- HODL -->
+        <div class="panel person">
+          <div class="person-avatar">📦</div>
+          <div class="person-name">HODL</div>
+          <div class="person-role">Просто держишь</div>
+          <div class="person-value" style="color:var(--green);" id="cs-hodl">$2,500.00</div>
+          <div class="person-detail">
+            <div><span id="cs-hodl-eth">0.5000</span> ETH = <b id="cs-hodl-eth-usd">$1,250.00</b></div>
+            <div><span id="cs-hodl-usdc">1,250.00</span> USDC</div>
+          </div>
         </div>
-        <div>
-          <div style="font-size:12px; color:var(--text-dim);">IL</div>
-          <div style="font-size:24px; font-weight:800; color:var(--yellow);" id="cs-il">$0</div>
-          <div style="font-size:12px; color:var(--text-dim);" id="cs-il-pct">0%</div>
-          <div style="font-size:12px; margin-top:4px;" id="cs-weeks">Окупится за: 0 нед</div>
+
+        <!-- IL arrow -->
+        <div class="il-arrow">
+          <div style="font-size:13px; color:var(--text-dim); margin-bottom:8px;">IL</div>
+          <div class="il-amount" id="cs-il">$0.00</div>
+          <div class="il-pct" id="cs-il-pct">0.0%</div>
+          <div style="font-size:32px; margin:8px 0;">↔</div>
+          <div style="font-size:12px;" id="cs-weeks">Окупится за: —</div>
         </div>
-        <div>
-          <div style="font-size:12px; color:var(--text-dim);">Пул</div>
-          <div style="font-size:24px; font-weight:800; color:var(--accent);" id="cs-pool">$2,500</div>
+
+        <!-- Pool -->
+        <div class="panel person">
+          <div class="person-avatar">🏊</div>
+          <div class="person-name">Пул</div>
+          <div class="person-role">Позиция V3</div>
+          <div class="person-value" style="color:var(--accent);" id="cs-pool">$2,500.00</div>
+          <div class="person-detail">
+            <div><span id="cs-pool-eth">0.5000</span> ETH = <b id="cs-pool-eth-usd">$1,250.00</b></div>
+            <div><span id="cs-pool-usdc">1,250.00</span> USDC</div>
+          </div>
         </div>
       </div>
     </div>
@@ -662,9 +681,21 @@ function calcSlider() {
 
   const r = calcILAtPrice(L, ethIn, usdcIn, entry, price, lower, upper);
 
-  document.getElementById('cs-hodl').textContent = fmtI(r.hodl);
-  document.getElementById('cs-pool').textContent = fmtI(r.poolTotal);
-  document.getElementById('cs-il').textContent = fmtI(r.il);
+  // HODL details
+  document.getElementById('cs-hodl').textContent = fmt(r.hodl);
+  document.getElementById('cs-hodl-eth').textContent = ethIn.toFixed(4);
+  document.getElementById('cs-hodl-eth-usd').textContent = fmt(ethIn * price);
+  document.getElementById('cs-hodl-usdc').textContent = usdcIn.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  // Pool details
+  const poolPos = v3AtPrice(L, price, lower, upper);
+  document.getElementById('cs-pool').textContent = fmt(r.poolTotal);
+  document.getElementById('cs-pool-eth').textContent = poolPos.eth.toFixed(4);
+  document.getElementById('cs-pool-eth-usd').textContent = fmt(poolPos.eth * price);
+  document.getElementById('cs-pool-usdc').textContent = poolPos.usdc.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  // IL
+  document.getElementById('cs-il').textContent = fmt(r.il);
   document.getElementById('cs-il-pct').textContent = r.ilPct.toFixed(1) + '%';
   const wks = feesWk > 0 && r.il > 0 ? Math.ceil(r.il / feesWk) + ' нед' : r.il === 0 ? '—' : '∞';
   document.getElementById('cs-weeks').textContent = 'Окупится за: ' + wks;

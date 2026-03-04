@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Урок 7 — Как работает пул: x × y = k</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #111111;
+    --card: #1e1e1e;
+    --card-hover: #2a2a2a;
+    --accent: #ef4444;
+    --accent2: #f97316;
+    --red: #ef4444;
+    --green: #22c55e;
+    --text: #f5f5f5;
+    --text-dim: #9ca3af;
+    --border: #333333;
+    --yellow: #facc15;
+    --orange: #f97316;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Montserrat', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    position: relative;
+  }
+
+  /* Background layers (from presentation template) */
+  body::before {
+    content: '';
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-image: url("https://page.gensparksite.com/slides_images/9c76947ae75f1735c8d0a40301471dd9.webp");
+    background-size: cover; background-position: center;
+    opacity: 0.15; z-index: 0; pointer-events: none;
+  }
+  body::after {
+    content: '';
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(17, 17, 17, 0.88);
+    z-index: 0; pointer-events: none;
+  }
+  body > * { position: relative; z-index: 1; }
+
+  .header { text-align: center; padding: 32px 20px 16px; }
+  .header .eyebrow {
+    color: var(--accent); font-size: 13px; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .header h1 {
+    font-size: 30px; font-weight: 800;
+    color: #ffffff;
+    letter-spacing: -0.01em;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.5);
+  }
+  .header p { color: var(--text-dim); margin-top: 6px; font-size: 15px; }
+
+  /* Tabs */
+  .tabs { display: flex; justify-content: center; gap: 8px; padding: 16px 20px; flex-wrap: wrap; }
+  .tab-btn {
+    padding: 10px 24px; border: 1px solid var(--border); border-radius: 12px;
+    background: var(--card); color: var(--text-dim); cursor: pointer;
+    font-size: 15px; font-weight: 500; transition: all 0.2s;
+  }
+  .tab-btn:hover { background: var(--card-hover); color: var(--text); }
+  .tab-btn.active { background: var(--accent); color: white; border-color: var(--accent); font-weight: 700; }
+  .tab-content { display: none; padding: 0 20px 40px; max-width: 1300px; margin: 0 auto; }
+  .tab-content.active { display: block; }
+
+  /* Shared */
+  .scene { border-radius: 20px; padding: 30px; }
+  .scene-title { text-align: center; font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+  .scene-subtitle { text-align: center; color: var(--text-dim); font-size: 14px; margin-bottom: 24px; }
+  .hint-box {
+    margin-top: 20px; padding: 16px 20px; border-radius: 12px;
+    font-size: 14px; text-align: center;
+  }
+  .hint-yellow { background: rgba(255,209,102,0.08); border: 1px solid rgba(255,209,102,0.2); color: var(--yellow); }
+  .hint-purple { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); color: #fca5a5; }
+
+  .btn {
+    padding: 12px 32px; border: none; border-radius: 12px;
+    font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn-green { background: var(--green); color: #000; }
+  .btn-red { background: var(--red); color: #fff; }
+  .btn-accent { background: var(--accent); color: white; font-weight: 700; }
+  .btn-accent:hover { box-shadow: 0 4px 20px rgba(239,68,68,0.4); }
+  .btn-accent:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-reset { background: var(--card); color: var(--text-dim); border: 1px solid var(--border); padding: 10px 20px; font-size: 13px; }
+  .btn-reset:hover { background: var(--card-hover); color: var(--text); }
+  .btn-orange { background: var(--orange); color: #000; }
+
+  input[type=number], select {
+    padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text); font-size: 16px; text-align: center;
+  }
+  select { font-size: 14px; }
+
+  .side-by-side {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+  }
+  @media (max-width: 900px) { .side-by-side { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--card); border-radius: 16px; padding: 24px;
+    border: 1px solid var(--border);
+  }
+  .panel h3 { font-size: 17px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .panel-label {
+    display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px;
+    border-radius: 6px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .label-analogy { background: var(--yellow); color: #000; }
+  .label-real { background: var(--accent); color: #fff; }
+
+  .result-box {
+    margin-top: 12px; padding: 14px; border-radius: 12px;
+    background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.15);
+    font-size: 14px; line-height: 1.6; min-height: 48px;
+  }
+
+  /* ===== TAB 1: МЕНЯЛЫ + ORDER BOOK ===== */
+  .scene-ob { background: linear-gradient(180deg, #1f1f1f 0%, #171717 100%); }
+
+  .menyaly-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .menyala {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 14px;
+    padding: 14px; text-align: center; transition: all 0.3s; cursor: pointer;
+  }
+  .menyala:hover { transform: translateY(-2px); border-color: var(--accent); }
+  .menyala.mm { border-color: var(--yellow); box-shadow: 0 0 15px rgba(255,209,102,0.1); }
+  .menyala-avatar { font-size: 32px; margin-bottom: 6px; }
+  .menyala-name { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+  .menyala-badge { display: inline-block; background: var(--yellow); color: #000; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 5px; margin-bottom: 6px; }
+  .rate { font-size: 12px; padding: 3px 6px; border-radius: 5px; display: block; margin: 2px 0; }
+  .rate-buy { background: rgba(0,212,170,0.1); color: var(--green); }
+  .rate-sell { background: rgba(255,77,106,0.1); color: var(--red); }
+  .menyala-cash { font-size: 10px; color: var(--text-dim); margin-top: 6px; }
+
+  /* Order Book */
+  .ob-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .ob-table th { color: var(--text-dim); font-weight: 500; padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase; }
+  .ob-table td { padding: 5px 8px; }
+  .ob-ask { color: var(--red); }
+  .ob-bid { color: var(--green); }
+  .ob-spread-row td { padding: 8px; text-align: center; color: var(--yellow); font-weight: 600; font-size: 12px; border-top: 1px dashed var(--border); border-bottom: 1px dashed var(--border); }
+  .ob-bar {
+    height: 4px; border-radius: 2px; margin-top: 2px;
+  }
+  .ob-bar-ask { background: rgba(255,77,106,0.3); }
+  .ob-bar-bid { background: rgba(0,212,170,0.3); }
+  .ob-mm-tag { font-size: 9px; background: var(--yellow); color: #000; padding: 1px 4px; border-radius: 3px; font-weight: 600; }
+
+  .action-row { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .action-row label { color: var(--text-dim); font-size: 13px; }
+
+  /* ===== TAB 2: АВТОМАТ + AMM ===== */
+  .scene-amm { background: linear-gradient(180deg, #1f1f1f 0%, #171717 100%); }
+
+  /* Автомат (аналогия) */
+  .automat {
+    position: relative; background: linear-gradient(180deg, #2d2d3d, #1d1d2d);
+    border: 2px solid #444; border-radius: 20px; padding: 20px;
+    text-align: center; margin-bottom: 16px;
+  }
+  .automat-title { font-size: 14px; font-weight: 700; color: var(--orange); margin-bottom: 4px; }
+  .automat-subtitle { font-size: 11px; color: var(--text-dim); margin-bottom: 16px; }
+  .automat-tanks {
+    display: flex; align-items: flex-end; justify-content: center; gap: 16px;
+    margin-bottom: 16px;
+  }
+  .a-tank {
+    width: 100px; height: 180px; border: 2px solid #555; border-radius: 0 0 12px 12px;
+    border-top: none; position: relative; overflow: hidden; background: rgba(0,0,0,0.3);
+  }
+  .a-tank-label { text-align: center; font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+  .a-tank-amount { text-align: center; font-size: 12px; color: var(--text-dim); margin-bottom: 4px; }
+  .a-liquid {
+    position: absolute; bottom: 0; left: 0; right: 0; transition: height 0.8s cubic-bezier(0.4,0,0.2,1);
+    border-radius: 0 0 10px 10px;
+  }
+  .a-liquid-rub { background: linear-gradient(180deg, rgba(34,197,94,0.5), rgba(34,197,94,0.8)); }
+  .a-liquid-usd { background: linear-gradient(180deg, rgba(239,68,68,0.5), rgba(239,68,68,0.8)); }
+  .a-connector { align-self: center; font-size: 20px; color: var(--text-dim); }
+  .automat-slot {
+    display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap;
+  }
+  .automat-slot input { width: 100px; font-size: 14px; }
+  .automat-info {
+    margin-top: 12px; font-size: 13px; padding: 10px; background: rgba(255,159,67,0.08);
+    border-radius: 10px; border: 1px solid rgba(255,159,67,0.2); color: var(--orange);
+  }
+  .automat-price { font-size: 13px; color: var(--text-dim); margin-bottom: 8px; }
+
+  /* AMM пул */
+  .pool-visual {
+    display: flex; align-items: flex-end; justify-content: center; gap: 16px;
+    margin-bottom: 16px;
+  }
+  .p-tank {
+    width: 100px; height: 180px; border: 2px solid var(--border); border-radius: 0 0 12px 12px;
+    border-top: none; position: relative; overflow: hidden; background: rgba(0,0,0,0.3);
+  }
+  .p-tank-label { text-align: center; font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+  .p-tank-amount { text-align: center; font-size: 12px; color: var(--text-dim); margin-bottom: 4px; }
+  .p-liquid {
+    position: absolute; bottom: 0; left: 0; right: 0; transition: height 0.8s cubic-bezier(0.4,0,0.2,1);
+    border-radius: 0 0 10px 10px;
+  }
+  .p-liquid-eth { background: linear-gradient(180deg, rgba(239,68,68,0.5), rgba(239,68,68,0.85)); }
+  .p-liquid-usdc { background: linear-gradient(180deg, rgba(34,197,94,0.5), rgba(34,197,94,0.85)); }
+  .p-connector { align-self: center; text-align: center; }
+  .p-formula { font-size: 12px; font-weight: 700; color: var(--yellow); }
+  .p-k { font-size: 11px; color: var(--text-dim); }
+
+  .swap-row { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .swap-row input { width: 120px; font-size: 15px; }
+  .swap-dir-btns { display: flex; justify-content: center; gap: 6px; margin-bottom: 12px; }
+  .swap-dir-btn {
+    padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text-dim); cursor: pointer; font-size: 13px; transition: all 0.2s;
+  }
+  .swap-dir-btn.active { background: var(--accent); color: white; border-color: var(--accent); font-weight: 600; }
+
+  .preview-box {
+    text-align: center; padding: 12px; background: rgba(239,68,68,0.06);
+    border-radius: 10px; margin-bottom: 12px; font-size: 13px; line-height: 1.7; min-height: 50px;
+  }
+
+  /* Curve */
+  .curve-section { background: var(--card); border-radius: 16px; padding: 20px; margin-top: 24px; }
+  .curve-section h3 { font-size: 16px; margin-bottom: 12px; }
+  .curve-canvas { width: 100%; height: 280px; display: block; }
+
+  /* Info panel */
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px; }
+  .info-cell { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(42,45,64,0.5); }
+  .info-cell-label { color: var(--text-dim); }
+  .info-cell-value { font-weight: 600; }
+  @media (max-width: 700px) { .info-grid { grid-template-columns: 1fr; } }
+
+  /* Swap log */
+  .swap-log { background: var(--card); border-radius: 16px; padding: 20px; margin-top: 24px; }
+  .swap-log h3 { font-size: 16px; margin-bottom: 12px; }
+  .swap-log table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .swap-log th { text-align: left; padding: 6px 8px; color: var(--text-dim); font-weight: 500; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .swap-log td { padding: 6px 8px; border-bottom: 1px solid rgba(42,45,64,0.4); white-space: nowrap; }
+  .empty-log { text-align: center; color: var(--text-dim); padding: 16px; font-size: 13px; }
+  .overflow-x { overflow-x: auto; }
+
+  /* ===== TAB 3: Comparison ===== */
+  .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 768px) { .compare-grid { grid-template-columns: 1fr; } }
+  .compare-card { background: var(--card); border-radius: 16px; padding: 24px; }
+  .compare-card h3 { font-size: 18px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .compare-item { padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 14px; line-height: 1.6; }
+  .compare-item:last-child { border-bottom: none; }
+  .compare-label { color: var(--text-dim); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+
+  /* Animations */
+  @keyframes slideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .slide-in { animation: slideIn 0.4s ease-out; }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .arrow-between {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; color: var(--yellow); padding: 8px 0;
+  }
+  .arrow-between span { font-size: 13px; color: var(--text-dim); margin-left: 8px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="eyebrow"><i class="fa-solid fa-circle" style="font-size:8px;"></i> Урок 7 · Модуль «Механика»</div>
+  <h1>Как работает пул: x × y = k</h1>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('ob', this)">📊 Ордера и менялы</button>
+  <button class="tab-btn" onclick="switchTab('amm', this)">🤖 Пул и автомат</button>
+  <button class="tab-btn" onclick="switchTab('compare', this)">⚖️ Сравнение</button>
+</div>
+
+<!-- ==================== ТАБ 1: ОРДЕРА + МЕНЯЛЫ ==================== -->
+<div id="tab-ob" class="tab-content active">
+  <div class="scene scene-ob">
+    <div class="scene-title">📊 Книга ордеров = Менялы на площади</div>
+    <div class="scene-subtitle">Слева — как это выглядит на бирже. Справа — та же самая логика, только в жизни.</div>
+
+    <div class="side-by-side">
+      <!-- Книга ордеров -->
+      <div class="panel">
+        <div class="panel-label label-real">Биржа (Binance)</div>
+        <h3>📋 Книга ордеров ETH/USDT</h3>
+
+        <div style="overflow-x: auto;">
+          <table class="ob-table" id="ob-table">
+            <thead>
+              <tr><th>Цена (USDT)</th><th>Кол-во (ETH)</th><th>Сумма</th><th></th></tr>
+            </thead>
+            <tbody id="ob-tbody"></tbody>
+          </table>
+        </div>
+
+        <div style="margin-top: 16px;">
+          <div class="action-row">
+            <label>Купить:</label>
+            <input type="number" id="ob-buy-amount" value="1" min="0.1" max="50" step="0.1" style="width:80px;">
+            <span style="font-size:13px;">ETH</span>
+            <button class="btn btn-green" style="padding:10px 20px; font-size:13px;" onclick="obBuy()">Купить</button>
+          </div>
+          <div class="action-row">
+            <label>Продать:</label>
+            <input type="number" id="ob-sell-amount" value="1" min="0.1" max="50" step="0.1" style="width:80px;">
+            <span style="font-size:13px;">ETH</span>
+            <button class="btn btn-red" style="padding:10px 20px; font-size:13px;" onclick="obSell()">Продать</button>
+          </div>
+          <div style="text-align:center; margin-top:8px;">
+            <button class="btn btn-reset" onclick="obReset()">Сбросить</button>
+          </div>
+        </div>
+        <div class="result-box" id="ob-result">Нажми «Купить» или «Продать» — ордера будут исполняться из книги.</div>
+      </div>
+
+      <!-- Менялы -->
+      <div class="panel">
+        <div class="panel-label label-analogy">Аналогия: вокзал, 1998</div>
+        <h3>🏪 Менялы на площади</h3>
+
+        <div class="menyaly-grid" id="menyaly-grid"></div>
+
+        <div class="action-row">
+          <label>У тебя:</label>
+          <input type="number" id="cex-amount" value="100" min="1" max="10000" step="1" style="width:80px;">
+          <select id="cex-currency" style="font-size:13px;">
+            <option value="usd">🇺🇸 $</option>
+            <option value="rub">🇷🇺 ₽</option>
+          </select>
+          <select id="cex-menyala" style="font-size:12px;"></select>
+        </div>
+        <div style="text-align:center;">
+          <button class="btn btn-orange" style="padding:10px 20px; font-size:13px;" onclick="cexExchange()">Обменять</button>
+          <button class="btn btn-reset" onclick="cexReset()">Сбросить</button>
+        </div>
+        <div class="result-box" id="cex-result">Выбери менялу и обменяй. Спред менялы = спред в книге ордеров.</div>
+      </div>
+    </div>
+
+    <div class="hint-box hint-yellow" style="margin-top:24px;">
+      💡 <b>Связь:</b> Каждый ордер в книге — это «меняла». Маркет-мейкер — самый крупный, с лучшим спредом. Чтобы обменять — нужен другой человек с противоположным ордером.
+    </div>
+  </div>
+</div>
+
+<!-- ==================== ТАБ 2: ПУЛ + АВТОМАТ ==================== -->
+<div id="tab-amm" class="tab-content">
+  <div class="scene scene-amm">
+    <div class="scene-title">🤖 Пул ликвидности = Автомат-обменник</div>
+    <div class="scene-subtitle">Слева — как это работает в DeFi. Справа — та же логика, только с рублями и долларами.</div>
+
+    <div class="side-by-side">
+      <!-- AMM Пул -->
+      <div class="panel">
+        <div class="panel-label label-real">DeFi (Uniswap)</div>
+        <h3>💧 Пул ETH / USDC</h3>
+
+        <div class="pool-visual">
+          <div>
+            <div class="p-tank-label" style="color:var(--accent);">ETH</div>
+            <div class="p-tank-amount" id="p-eth-label">0</div>
+            <div class="p-tank">
+              <div class="p-liquid p-liquid-eth" id="p-eth-liq" style="height:0%;"></div>
+            </div>
+          </div>
+          <div class="p-connector">
+            <div class="p-formula">x × y = k</div>
+            <div class="p-k" id="p-k-label">k = 0</div>
+            <div style="font-size:20px;margin:2px 0;">⇄</div>
+          </div>
+          <div>
+            <div class="p-tank-label" style="color:var(--accent2);">USDC</div>
+            <div class="p-tank-amount" id="p-usdc-label">0</div>
+            <div class="p-tank">
+              <div class="p-liquid p-liquid-usdc" id="p-usdc-liq" style="height:0%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Формула цены -->
+        <div id="p-formula-box" style="background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.15); border-radius:10px; padding:12px; margin-bottom:14px; font-size:13px; line-height:1.8; text-align:center;"></div>
+
+        <!-- Добавить ликвидность -->
+        <div id="p-liq-section" style="background:rgba(0,212,170,0.06); border:1px solid rgba(0,212,170,0.15); border-radius:12px; padding:16px; margin-bottom:14px;">
+          <div style="font-size:14px; font-weight:600; color:var(--accent2); text-align:center; margin-bottom:8px;">➕ Добавить ликвидность</div>
+          <div id="p-liq-hint" style="font-size:12px; color:var(--text-dim); margin-bottom:10px; text-align:center;">Пул пуст! Внеси оба токена — ты задаёшь начальную цену.</div>
+          <div class="swap-row">
+            <input type="number" id="p-liq-eth" value="10" min="0.01" step="any" style="width:80px;" oninput="updatePoolLiqPreview()">
+            <span style="font-size:13px;">ETH</span>
+            <span style="color:var(--text-dim);">+</span>
+            <input type="number" id="p-liq-usdc" value="25000" min="0.01" step="any" style="width:100px;" oninput="updatePoolLiqPreview()">
+            <span style="font-size:13px;">USDC</span>
+          </div>
+          <div id="p-liq-preview" style="font-size:12px; color:var(--text-dim); text-align:center; margin:8px 0;"></div>
+          <div style="text-align:center;">
+            <button class="btn btn-green" style="padding:10px 24px; font-size:14px;" onclick="addPoolLiq()">💧 Добавить в пул</button>
+          </div>
+        </div>
+
+        <!-- Своп (скрыт пока пул пуст) -->
+        <div id="p-swap-section" style="display:none;">
+        <div class="swap-dir-btns">
+          <button class="swap-dir-btn active" id="p-dir-1" onclick="setPoolDir('usdc-eth')">USDC → ETH</button>
+          <button class="swap-dir-btn" id="p-dir-2" onclick="setPoolDir('eth-usdc')">ETH → USDC</button>
+        </div>
+        <div class="swap-row">
+          <label style="font-size:13px; color:var(--text-dim);">Отдаёшь:</label>
+          <input type="number" id="p-amount" value="2500" min="0.01" step="any" oninput="updatePoolPreview()">
+          <span style="font-weight:600; font-size:14px;" id="p-token-in">USDC</span>
+        </div>
+        <div class="preview-box" id="p-preview">Введи сумму</div>
+        <div style="text-align:center;">
+          <button class="btn btn-accent" id="p-swap-btn" onclick="doPoolSwap()">🔄 Обменять</button>
+          <button class="btn btn-reset" onclick="poolReset()">Сбросить всё</button>
+        </div>
+        </div><!-- /p-swap-section -->
+      </div>
+
+      <!-- Автомат-обменник -->
+      <div class="panel">
+        <div class="panel-label label-analogy">Аналогия: автомат на улице</div>
+        <h3>🏧 Автомат «Рубль ↔ Доллар»</h3>
+
+        <div class="automat">
+          <div class="automat-title">ОБМЕННЫЙ АВТОМАТ</div>
+          <div class="automat-subtitle">Без кассира. Суёшь одно — получаешь другое.</div>
+
+          <div class="automat-tanks">
+            <div>
+              <div class="a-tank-label" style="color:var(--accent);">🇺🇸 Доллары</div>
+              <div class="a-tank-amount" id="a-usd-label">$0</div>
+              <div class="a-tank">
+                <div class="a-liquid a-liquid-usd" id="a-usd-liq" style="height:0%;"></div>
+              </div>
+            </div>
+            <div class="a-connector">⇄</div>
+            <div>
+              <div class="a-tank-label" style="color:var(--accent2);">🇷🇺 Рубли</div>
+              <div class="a-tank-amount" id="a-rub-label">0₽</div>
+              <div class="a-tank">
+                <div class="a-liquid a-liquid-rub" id="a-rub-liq" style="height:0%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Формула курса -->
+          <div id="a-formula-box" style="background:rgba(255,159,67,0.06); border:1px solid rgba(255,159,67,0.15); border-radius:10px; padding:10px; margin-bottom:10px; font-size:12px; line-height:1.8; text-align:center;"></div>
+
+          <!-- Положить деньги в автомат -->
+          <div id="a-liq-section" style="background:rgba(255,159,67,0.06); border:1px solid rgba(255,159,67,0.15); border-radius:10px; padding:12px; margin-bottom:10px;">
+            <div style="font-size:13px; font-weight:600; color:var(--orange); text-align:center; margin-bottom:6px;">➕ Положить деньги в автомат</div>
+            <div id="a-liq-hint" style="font-size:11px; color:var(--text-dim); margin-bottom:8px; text-align:center;">Автомат пуст! Положи обе валюты — ты задаёшь начальный курс.</div>
+            <div class="automat-slot">
+              <input type="number" id="a-liq-usd" value="1000" min="1" step="any" style="width:80px;" oninput="updateAutoLiqPreview()">
+              <span style="font-size:12px;">$</span>
+              <span style="color:var(--text-dim);">+</span>
+              <input type="number" id="a-liq-rub" value="95000" min="1" step="any" style="width:100px;" oninput="updateAutoLiqPreview()">
+              <span style="font-size:12px;">₽</span>
+            </div>
+            <div id="a-liq-preview" style="font-size:11px; color:var(--text-dim); text-align:center; margin:6px 0;"></div>
+            <div style="text-align:center; margin-top:6px;">
+              <button class="btn btn-orange" style="padding:8px 20px; font-size:13px;" onclick="addAutoLiq()">💰 Положить в автомат</button>
+            </div>
+          </div>
+
+          <!-- Своп (скрыт пока пуст) -->
+          <div id="a-swap-section" style="display:none;">
+          <div class="swap-dir-btns">
+            <button class="swap-dir-btn active" id="a-dir-1" onclick="setAutoDir('rub-usd')">₽ → $</button>
+            <button class="swap-dir-btn" id="a-dir-2" onclick="setAutoDir('usd-rub')">$ → ₽</button>
+          </div>
+          <div class="automat-slot">
+            <label style="font-size:13px; color:var(--text-dim);">Суёшь:</label>
+            <input type="number" id="a-amount" value="9500" min="1" step="any" oninput="updateAutoPreview()">
+            <span style="font-weight:600; font-size:14px;" id="a-token-in">₽</span>
+          </div>
+          <div class="automat-info" id="a-preview">Введи сумму</div>
+          <div style="text-align:center; margin-top:12px;">
+            <button class="btn btn-orange" style="padding:10px 24px; font-size:14px;" onclick="doAutoSwap()">Обменять</button>
+            <button class="btn btn-reset" onclick="autoReset()">Сбросить всё</button>
+          </div>
+          </div><!-- /a-swap-section -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Кривая -->
+    <div class="curve-section">
+      <h3>📈 Кривая x × y = k (пул ETH/USDC)</h3>
+      <canvas class="curve-canvas" id="curve-canvas"></canvas>
+    </div>
+
+    <!-- Инфо + лог -->
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px;">
+      <div class="panel">
+        <h3>📊 Состояние пула</h3>
+        <div class="info-grid" id="pool-info-grid"></div>
+      </div>
+      <div class="panel">
+        <h3>🏧 Состояние автомата</h3>
+        <div class="info-grid" id="auto-info-grid"></div>
+      </div>
+    </div>
+
+    <div class="swap-log">
+      <h3>📋 История свопов (пул)</h3>
+      <div class="overflow-x">
+        <table>
+          <thead><tr><th>#</th><th>Направление</th><th>Отдал</th><th>Получил</th><th>Цена до</th><th>Цена после</th><th>Проскальзывание</th></tr></thead>
+          <tbody id="swap-tbody"></tbody>
+        </table>
+      </div>
+      <div class="empty-log" id="empty-log">Сделай первый своп 👆</div>
+    </div>
+
+    <div class="hint-box hint-purple" style="margin-top:24px;">
+      💡 <b>Заметь:</b> и в автомате, и в пуле работает одна формула. Чем больше забираешь — тем дороже каждая следующая единица. Никакого кассира, никакого менялы — только математика.
+    </div>
+  </div>
+</div>
+
+<!-- ==================== ТАБ 3: СРАВНЕНИЕ ==================== -->
+<div id="tab-compare" class="tab-content">
+  <div class="scene-title" style="text-align:center; margin-bottom:24px;">⚖️ Менялы vs Автомат</div>
+
+  <div class="compare-grid">
+    <div class="compare-card" style="border:1px solid rgba(255,209,102,0.3);">
+      <h3>🏪 Менялы (Биржа / CEX)</h3>
+      <div class="compare-item"><div class="compare-label">Кто устанавливает цену?</div>Люди. Каждый меняла ставит свой курс.</div>
+      <div class="compare-item"><div class="compare-label">Кто зарабатывает?</div>Менялы — на спреде между покупкой и продажей.</div>
+      <div class="compare-item"><div class="compare-label">Кто может быть менялой?</div>Только крупный игрок. На Binance маркет-мейкер = фирма с миллионами.</div>
+      <div class="compare-item"><div class="compare-label">Что если менял нет?</div>Нет ликвидности → нет обмена. Стоишь и ждёшь.</div>
+      <div class="compare-item"><div class="compare-label">Прозрачность</div>Видишь книгу ордеров, но не знаешь кто за ними стоит.</div>
+    </div>
+    <div class="compare-card" style="border:1px solid rgba(239,68,68,0.3);">
+      <h3>🤖 Автомат (Пул / AMM)</h3>
+      <div class="compare-item"><div class="compare-label">Кто устанавливает цену?</div>Никто. Формула x × y = k рассчитывает курс автоматически.</div>
+      <div class="compare-item"><div class="compare-label">Кто зарабатывает?</div>Все, кто положил деньги в автомат. Комиссия 0.05–1% с каждого обмена.</div>
+      <div class="compare-item"><div class="compare-label">Кто может быть «менялой»?</div>Любой. Положил $10 в пул — ты уже маркет-мейкер.</div>
+      <div class="compare-item"><div class="compare-label">Что если никого нет?</div>Автомат работает 24/7. Пока есть токены внутри — обмен возможен.</div>
+      <div class="compare-item"><div class="compare-label">Прозрачность</div>Всё на блокчейне. Видно каждый токен, каждую комиссию.</div>
+    </div>
+  </div>
+
+  <div class="hint-box hint-yellow" style="margin-top:24px;">
+    💡 <b>Главная мысль:</b> DeFi убрал посредника. Раньше менять деньги мог только крупный игрок. Теперь это может любой — через формулу.
+  </div>
+</div>
+
+<script>
+// ============================================================
+// TAB SWITCHING
+// ============================================================
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (id === 'amm') setTimeout(drawCurve, 50);
+}
+
+// ============================================================
+// TAB 1: ORDER BOOK + МЕНЯЛЫ
+// ============================================================
+const obAsksInit = [
+  { price: 2510, amount: 0.5, mm: false },
+  { price: 2507, amount: 1.2, mm: false },
+  { price: 2505, amount: 3.0, mm: true },
+  { price: 2502, amount: 0.8, mm: false },
+  { price: 2501, amount: 2.0, mm: false },
+];
+const obBidsInit = [
+  { price: 2499, amount: 1.5, mm: false },
+  { price: 2498, amount: 2.5, mm: true },
+  { price: 2495, amount: 0.7, mm: false },
+  { price: 2492, amount: 1.0, mm: false },
+  { price: 2490, amount: 0.3, mm: false },
+];
+let obAsks, obBids;
+function obInitData() {
+  obAsks = JSON.parse(JSON.stringify(obAsksInit));
+  obBids = JSON.parse(JSON.stringify(obBidsInit));
+}
+obInitData();
+
+function renderOB() {
+  const tbody = document.getElementById('ob-tbody');
+  const maxAmt = Math.max(...obAsks.map(o=>o.amount), ...obBids.map(o=>o.amount));
+  let html = '';
+  // Asks (top, sorted desc)
+  const sortedAsks = [...obAsks].sort((a,b) => b.price - a.price);
+  sortedAsks.forEach(o => {
+    html += `<tr class="ob-ask"><td>$${o.price.toLocaleString()}</td><td>${o.amount.toFixed(2)}</td><td>$${(o.price*o.amount).toLocaleString(undefined,{maximumFractionDigits:0})}</td><td>${o.mm?'<span class="ob-mm-tag">MM</span>':''}</td></tr>`;
+  });
+  // Spread
+  const bestAsk = Math.min(...obAsks.map(o=>o.price));
+  const bestBid = Math.max(...obBids.map(o=>o.price));
+  html += `<tr class="ob-spread-row"><td colspan="4">Спред: $${(bestAsk - bestBid).toFixed(0)} (${((bestAsk-bestBid)/bestBid*100).toFixed(2)}%)</td></tr>`;
+  // Bids
+  const sortedBids = [...obBids].sort((a,b) => b.price - a.price);
+  sortedBids.forEach(o => {
+    html += `<tr class="ob-bid"><td>$${o.price.toLocaleString()}</td><td>${o.amount.toFixed(2)}</td><td>$${(o.price*o.amount).toLocaleString(undefined,{maximumFractionDigits:0})}</td><td>${o.mm?'<span class="ob-mm-tag">MM</span>':''}</td></tr>`;
+  });
+  tbody.innerHTML = html;
+}
+
+function obBuy() {
+  let qty = parseFloat(document.getElementById('ob-buy-amount').value);
+  if (!qty || qty <= 0) return;
+  const result = document.getElementById('ob-result');
+  let filled = 0, totalCost = 0;
+  // Sort asks by price asc
+  obAsks.sort((a,b) => a.price - b.price);
+  while (qty > 0 && obAsks.length > 0) {
+    const best = obAsks[0];
+    const take = Math.min(qty, best.amount);
+    filled += take; totalCost += take * best.price;
+    best.amount -= take; qty -= take;
+    if (best.amount < 0.001) obAsks.shift();
+  }
+  if (filled > 0) {
+    const avgPrice = totalCost / filled;
+    result.innerHTML = `✅ Купил <b>${filled.toFixed(2)} ETH</b> за <b>$${totalCost.toLocaleString(undefined,{maximumFractionDigits:0})}</b><br>Средняя цена: <b>$${avgPrice.toFixed(2)}</b>${qty > 0 ? `<br>⚠️ Не хватило ордеров на ${qty.toFixed(2)} ETH` : ''}`;
+  } else {
+    result.innerHTML = '❌ Нет ордеров на продажу!';
+  }
+  renderOB();
+}
+
+function obSell() {
+  let qty = parseFloat(document.getElementById('ob-sell-amount').value);
+  if (!qty || qty <= 0) return;
+  const result = document.getElementById('ob-result');
+  let filled = 0, totalRevenue = 0;
+  obBids.sort((a,b) => b.price - a.price);
+  while (qty > 0 && obBids.length > 0) {
+    const best = obBids[0];
+    const take = Math.min(qty, best.amount);
+    filled += take; totalRevenue += take * best.price;
+    best.amount -= take; qty -= take;
+    if (best.amount < 0.001) obBids.shift();
+  }
+  if (filled > 0) {
+    const avgPrice = totalRevenue / filled;
+    result.innerHTML = `✅ Продал <b>${filled.toFixed(2)} ETH</b> за <b>$${totalRevenue.toLocaleString(undefined,{maximumFractionDigits:0})}</b><br>Средняя цена: <b>$${avgPrice.toFixed(2)}</b>${qty > 0 ? `<br>⚠️ Не хватило ордеров на покупку ${qty.toFixed(2)} ETH` : ''}`;
+  } else {
+    result.innerHTML = '❌ Нет ордеров на покупку!';
+  }
+  renderOB();
+}
+
+function obReset() {
+  obInitData(); renderOB();
+  document.getElementById('ob-result').innerHTML = 'Книга ордеров сброшена.';
+}
+
+// Менялы
+const menyalyInit = [
+  { name:'Ашот', emoji:'🧔', buy:93, sell:97, usd:5000, rub:500000 },
+  { name:'Борис', emoji:'👨‍💼', buy:92.5, sell:97.5, usd:3000, rub:300000 },
+  { name:'ММ', emoji:'🏦', buy:94.5, sell:95.5, usd:50000, rub:5000000, mm:true },
+  { name:'Гриша', emoji:'🧑‍🦱', buy:94, sell:96.5, usd:8000, rub:800000 },
+  { name:'Валера', emoji:'👴', buy:91, sell:98, usd:2000, rub:200000 },
+  { name:'Дима', emoji:'🧑‍💻', buy:93.5, sell:96, usd:4000, rub:400000 },
+];
+let menyaly = JSON.parse(JSON.stringify(menyalyInit));
+
+function renderMenyaly() {
+  const grid = document.getElementById('menyaly-grid');
+  const sel = document.getElementById('cex-menyala');
+  grid.innerHTML = ''; sel.innerHTML = '';
+  menyaly.forEach((m, i) => {
+    grid.innerHTML += `
+      <div class="menyala ${m.mm?'mm':''}" onclick="document.getElementById('cex-menyala').value=${i}">
+        <div class="menyala-avatar">${m.emoji}</div>
+        <div class="menyala-name">${m.name}</div>
+        ${m.mm ? '<div class="menyala-badge">МАРКЕТ-МЕЙКЕР</div>' : ''}
+        <div><span class="rate rate-buy">Купит $ за ${m.buy.toFixed(1)}₽</span><span class="rate rate-sell">Продаст $ за ${m.sell.toFixed(1)}₽</span></div>
+        <div class="menyala-cash">$${m.usd.toLocaleString()} / ${m.rub.toLocaleString()}₽</div>
+      </div>`;
+    sel.innerHTML += `<option value="${i}">${m.emoji} ${m.name} (${(m.sell-m.buy).toFixed(1)}₽)</option>`;
+  });
+}
+
+function cexExchange() {
+  const amount = parseFloat(document.getElementById('cex-amount').value);
+  const currency = document.getElementById('cex-currency').value;
+  const idx = parseInt(document.getElementById('cex-menyala').value);
+  const m = menyaly[idx]; const res = document.getElementById('cex-result');
+  if (!amount || amount <= 0) { res.innerHTML = '❌ Введи сумму'; return; }
+  if (currency === 'usd') {
+    const rub = amount * m.buy;
+    if (m.rub < rub) { res.innerHTML = `❌ У ${m.name} не хватает рублей`; return; }
+    m.usd += amount; m.rub -= rub;
+    res.innerHTML = `✅ <b>${m.name}</b> купил $${amount} по <b>${m.buy.toFixed(1)}₽</b> → ты получил <b>${rub.toLocaleString()}₽</b><br><span style="color:var(--text-dim)">Спред: ${(m.sell-m.buy).toFixed(1)}₽</span>`;
+  } else {
+    const usd = amount / m.sell;
+    if (m.usd < usd) { res.innerHTML = `❌ У ${m.name} не хватает долларов`; return; }
+    m.rub += amount; m.usd -= usd;
+    res.innerHTML = `✅ <b>${m.name}</b> продал тебе <b>$${usd.toFixed(2)}</b> по <b>${m.sell.toFixed(1)}₽</b><br><span style="color:var(--text-dim)">Спред: ${(m.sell-m.buy).toFixed(1)}₽</span>`;
+  }
+  renderMenyaly();
+}
+
+function cexReset() {
+  menyaly = JSON.parse(JSON.stringify(menyalyInit));
+  renderMenyaly();
+  document.getElementById('cex-result').innerHTML = 'Сброшено.';
+}
+
+// ============================================================
+// TAB 2: AMM POOL + АВТОМАТ
+// ============================================================
+let pool = { eth: 0, usdc: 0, k: 0 };
+let auto_ = { usd: 0, rub: 0, k: 0 };
+let poolDir = 'usdc-eth', autoDir = 'rub-usd';
+let swapLog = [];
+
+function isPoolEmpty() { return pool.eth === 0 || pool.usdc === 0; }
+function isAutoEmpty() { return auto_.usd === 0 || auto_.rub === 0; }
+
+// Pool
+function setPoolDir(d) {
+  poolDir = d;
+  document.getElementById('p-dir-1').classList.toggle('active', d==='usdc-eth');
+  document.getElementById('p-dir-2').classList.toggle('active', d==='eth-usdc');
+  document.getElementById('p-token-in').textContent = d==='usdc-eth' ? 'USDC' : 'ETH';
+  document.getElementById('p-amount').value = d==='usdc-eth' ? '2500' : '1';
+  updatePoolPreview();
+}
+
+function updatePoolPreview() {
+  const amt = parseFloat(document.getElementById('p-amount').value);
+  const prev = document.getElementById('p-preview');
+  const btn = document.getElementById('p-swap-btn');
+  if (isPoolEmpty()) { prev.innerHTML = 'Сначала добавь ликвидность'; btn.disabled = true; return; }
+  if (!amt || amt <= 0) { prev.innerHTML = 'Введи сумму'; btn.disabled = true; return; }
+  const spot = pool.usdc / pool.eth;
+
+  if (poolDir === 'usdc-eth') {
+    if (amt >= pool.usdc * 0.9) { prev.innerHTML = '⚠️ Слишком много'; btn.disabled = true; return; }
+    const newU = pool.usdc + amt, newE = pool.k / newU, out = pool.eth - newE;
+    const eff = amt / out, slip = ((eff / spot) - 1) * 100;
+    prev.innerHTML = `Получишь: <b>${out.toFixed(4)} ETH</b> · Цена: <b>$${eff.toFixed(2)}</b> <span style="color:${slip>1?'var(--red)':'var(--text-dim)'}"> (${slip.toFixed(2)}%)</span>`;
+    btn.disabled = false;
+  } else {
+    if (amt >= pool.eth * 0.9) { prev.innerHTML = '⚠️ Слишком много'; btn.disabled = true; return; }
+    const newE = pool.eth + amt, newU = pool.k / newE, out = pool.usdc - newU;
+    const eff = out / amt, slip = (1 - (eff / spot)) * 100;
+    prev.innerHTML = `Получишь: <b>${out.toLocaleString(undefined,{maximumFractionDigits:2})} USDC</b> · Цена: <b>$${eff.toFixed(2)}</b> <span style="color:${slip>1?'var(--red)':'var(--text-dim)'}"> (${slip.toFixed(2)}%)</span>`;
+    btn.disabled = false;
+  }
+}
+
+function doPoolSwap() {
+  const amt = parseFloat(document.getElementById('p-amount').value);
+  if (!amt || amt <= 0) return;
+  const priceBefore = pool.usdc / pool.eth;
+
+  if (poolDir === 'usdc-eth') {
+    const newU = pool.usdc + amt, newE = pool.k / newU, out = pool.eth - newE;
+    const eff = amt / out, slip = ((eff / priceBefore) - 1) * 100;
+    pool.eth = newE; pool.usdc = newU;
+    swapLog.push({ dir: 'USDC→ETH', given: `${amt.toLocaleString()} USDC`, got: `${out.toFixed(4)} ETH`, pb: `$${priceBefore.toFixed(0)}`, pa: `$${(pool.usdc/pool.eth).toFixed(0)}`, slip: `${slip.toFixed(2)}%` });
+  } else {
+    const newE = pool.eth + amt, newU = pool.k / newE, out = pool.usdc - newU;
+    const eff = out / amt, slip = (1 - (eff / priceBefore)) * 100;
+    pool.eth = newE; pool.usdc = newU;
+    swapLog.push({ dir: 'ETH→USDC', given: `${amt.toFixed(4)} ETH`, got: `${out.toLocaleString(undefined,{maximumFractionDigits:2})} USDC`, pb: `$${priceBefore.toFixed(0)}`, pa: `$${(pool.usdc/pool.eth).toFixed(0)}`, slip: `${slip.toFixed(2)}%` });
+  }
+  updatePoolUI(); updatePoolPreview(); renderSwapLog(); drawCurve();
+}
+
+function updatePoolUI() {
+  const empty = isPoolEmpty();
+
+  // Show/hide swap section
+  document.getElementById('p-swap-section').style.display = empty ? 'none' : 'block';
+
+  // Tank levels
+  if (empty) {
+    document.getElementById('p-eth-liq').style.height = '0%';
+    document.getElementById('p-usdc-liq').style.height = '0%';
+    document.getElementById('p-eth-label').textContent = '0';
+    document.getElementById('p-usdc-label').textContent = '0';
+    document.getElementById('p-k-label').textContent = 'k = 0';
+  } else {
+    const maxEthVis = Math.max(20, pool.eth * 1.5);
+    const maxUsdcVis = Math.max(50000, pool.usdc * 1.5);
+    document.getElementById('p-eth-liq').style.height = Math.min(95, Math.max(5, (pool.eth / maxEthVis) * 100)) + '%';
+    document.getElementById('p-usdc-liq').style.height = Math.min(95, Math.max(5, (pool.usdc / maxUsdcVis) * 100)) + '%';
+    document.getElementById('p-eth-label').textContent = pool.eth.toFixed(2);
+    document.getElementById('p-usdc-label').textContent = pool.usdc.toLocaleString(undefined,{maximumFractionDigits:0});
+    document.getElementById('p-k-label').textContent = 'k = ' + pool.k.toLocaleString(undefined,{maximumFractionDigits:0});
+  }
+
+  // Formula box
+  const fb = document.getElementById('p-formula-box');
+  if (empty) {
+    fb.innerHTML = `<div style="color:var(--yellow);">⬆️ Пул пуст — добавь ликвидность выше, чтобы сформировать цену</div>`;
+  } else {
+    const curP = pool.usdc / pool.eth;
+    fb.innerHTML = `
+      <div style="color:var(--text-dim); font-size:11px; margin-bottom:4px;">📐 Как получается цена:</div>
+      <div><b>Цена ETH</b> = USDC ÷ ETH = <span style="color:var(--accent2)">${pool.usdc.toLocaleString(undefined,{maximumFractionDigits:0})}</span> ÷ <span style="color:var(--accent)">${pool.eth.toFixed(2)}</span> = <b style="color:#fff;">$${curP.toLocaleString(undefined,{maximumFractionDigits:2})}</b></div>
+      <div style="margin-top:4px;"><b>K</b> = ETH × USDC = <span style="color:var(--accent)">${pool.eth.toFixed(2)}</span> × <span style="color:var(--accent2)">${pool.usdc.toLocaleString(undefined,{maximumFractionDigits:0})}</span> = <b>${pool.k.toLocaleString(undefined,{maximumFractionDigits:0})}</b></div>
+    `;
+  }
+
+  // Liq hint
+  const liqHint = document.getElementById('p-liq-hint');
+  const liqUsdcInput = document.getElementById('p-liq-usdc');
+  if (empty) {
+    liqHint.textContent = '🚨 Пул пуст! Внеси оба токена — ТЫ задаёшь начальную цену.';
+    liqUsdcInput.readOnly = false;
+  } else {
+    liqHint.textContent = 'Добавь ещё ликвидности по текущей цене';
+    liqUsdcInput.readOnly = true;
+  }
+
+  updatePoolLiqPreview();
+
+  // Info grid
+  const curP2 = empty ? 0 : pool.usdc / pool.eth;
+  document.getElementById('pool-info-grid').innerHTML = `
+    <div class="info-cell"><span class="info-cell-label">ETH</span><span class="info-cell-value">${empty ? '—' : pool.eth.toFixed(4)}</span></div>
+    <div class="info-cell"><span class="info-cell-label">USDC</span><span class="info-cell-value">${empty ? '—' : pool.usdc.toLocaleString(undefined,{maximumFractionDigits:2})}</span></div>
+    <div class="info-cell"><span class="info-cell-label">K</span><span class="info-cell-value">${empty ? '—' : pool.k.toLocaleString(undefined,{maximumFractionDigits:0})}</span></div>
+    <div class="info-cell"><span class="info-cell-label">Цена ETH</span><span class="info-cell-value">${empty ? '—' : '$'+curP2.toFixed(2)}</span></div>
+    <div class="info-cell"><span class="info-cell-label">Свопов</span><span class="info-cell-value">${swapLog.length}</span></div>
+    <div class="info-cell"><span class="info-cell-label">Δ цена</span><span class="info-cell-value" style="color:var(--text-dim)">—</span></div>
+  `;
+}
+
+// Pool Liquidity
+function updatePoolLiqPreview() {
+  const ethAmt = parseFloat(document.getElementById('p-liq-eth').value);
+  const usdcField = document.getElementById('p-liq-usdc');
+  const prev = document.getElementById('p-liq-preview');
+
+  if (isPoolEmpty()) {
+    // First deposit — both fields editable, user sets initial price
+    const usdcAmt = parseFloat(usdcField.value);
+    if (!ethAmt || ethAmt <= 0 || !usdcAmt || usdcAmt <= 0) { prev.innerHTML = ''; return; }
+    const price = usdcAmt / ethAmt;
+    const newK = ethAmt * usdcAmt;
+    prev.innerHTML = `Начальная цена: <b>$${price.toLocaleString(undefined,{maximumFractionDigits:2})}</b> за ETH · K = ${newK.toLocaleString(undefined,{maximumFractionDigits:0})}`;
+  } else {
+    // Subsequent — auto-calc second token
+    if (!ethAmt || ethAmt <= 0) { usdcField.value = ''; prev.innerHTML = ''; return; }
+    const price = pool.usdc / pool.eth;
+    const usdcNeeded = ethAmt * price;
+    usdcField.value = usdcNeeded.toFixed(2);
+    const newK = (pool.eth + ethAmt) * (pool.usdc + usdcNeeded);
+    prev.innerHTML = `${ethAmt} ETH × $${price.toFixed(2)} = ${usdcNeeded.toFixed(2)} USDC · K: ${pool.k.toLocaleString(undefined,{maximumFractionDigits:0})} → ${newK.toLocaleString(undefined,{maximumFractionDigits:0})}`;
+  }
+}
+
+function addPoolLiq() {
+  const ethAmt = parseFloat(document.getElementById('p-liq-eth').value);
+  const usdcAmt = parseFloat(document.getElementById('p-liq-usdc').value);
+  if (!ethAmt || ethAmt <= 0 || !usdcAmt || usdcAmt <= 0) return;
+
+  if (isPoolEmpty()) {
+    // First deposit — user defines price
+    pool.eth = ethAmt;
+    pool.usdc = usdcAmt;
+  } else {
+    pool.eth += ethAmt;
+    pool.usdc += usdcAmt;
+  }
+  pool.k = pool.eth * pool.usdc;
+  updatePoolUI(); updatePoolPreview(); drawCurve();
+}
+
+function poolReset() {
+  pool = { eth: 0, usdc: 0, k: 0 };
+  swapLog = [];
+  document.getElementById('p-liq-eth').value = '10';
+  document.getElementById('p-liq-usdc').value = '25000';
+  updatePoolUI(); renderSwapLog(); drawCurve();
+}
+
+function renderSwapLog() {
+  const tbody = document.getElementById('swap-tbody');
+  const empty = document.getElementById('empty-log');
+  if (swapLog.length === 0) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  tbody.innerHTML = swapLog.map((s,i) => `<tr class="slide-in"><td>${i+1}</td><td>${s.dir}</td><td>${s.given}</td><td>${s.got}</td><td>${s.pb}</td><td>${s.pa}</td><td>${s.slip}</td></tr>`).join('');
+}
+
+// Автомат
+function setAutoDir(d) {
+  autoDir = d;
+  document.getElementById('a-dir-1').classList.toggle('active', d==='rub-usd');
+  document.getElementById('a-dir-2').classList.toggle('active', d==='usd-rub');
+  document.getElementById('a-token-in').textContent = d==='rub-usd' ? '₽' : '$';
+  document.getElementById('a-amount').value = d==='rub-usd' ? '9500' : '100';
+  updateAutoPreview();
+}
+
+function updateAutoPreview() {
+  const amt = parseFloat(document.getElementById('a-amount').value);
+  const prev = document.getElementById('a-preview');
+  if (isAutoEmpty()) { prev.innerHTML = 'Сначала положи деньги в автомат'; return; }
+  if (!amt || amt <= 0) { prev.innerHTML = 'Введи сумму'; return; }
+  const spot = auto_.rub / auto_.usd;
+
+  if (autoDir === 'rub-usd') {
+    if (amt >= auto_.rub * 0.9) { prev.innerHTML = '⚠️ Слишком много'; return; }
+    const newR = auto_.rub + amt, newU = auto_.k / newR, out = auto_.usd - newU;
+    const eff = amt / out, slip = ((eff / spot) - 1) * 100;
+    prev.innerHTML = `Получишь: <b>$${out.toFixed(2)}</b> · Курс: <b>${eff.toFixed(2)}₽/$</b> <span style="color:${slip>2?'var(--red)':'inherit'}">(${slip.toFixed(1)}%)</span>`;
+  } else {
+    if (amt >= auto_.usd * 0.9) { prev.innerHTML = '⚠️ Слишком много'; return; }
+    const newU = auto_.usd + amt, newR = auto_.k / newU, out = auto_.rub - newR;
+    const eff = out / amt, slip = (1 - (eff / spot)) * 100;
+    prev.innerHTML = `Получишь: <b>${out.toLocaleString(undefined,{maximumFractionDigits:0})}₽</b> · Курс: <b>${eff.toFixed(2)}₽/$</b> <span style="color:${slip>2?'var(--red)':'inherit'}">(${slip.toFixed(1)}%)</span>`;
+  }
+}
+
+function doAutoSwap() {
+  const amt = parseFloat(document.getElementById('a-amount').value);
+  if (!amt || amt <= 0) return;
+  if (autoDir === 'rub-usd') {
+    if (amt >= auto_.rub * 0.9) return;
+    const newR = auto_.rub + amt, newU = auto_.k / newR, out = auto_.usd - newU;
+    auto_.usd = newU; auto_.rub = newR;
+  } else {
+    if (amt >= auto_.usd * 0.9) return;
+    const newU = auto_.usd + amt, newR = auto_.k / newU, out = auto_.rub - newR;
+    auto_.usd = newU; auto_.rub = newR;
+  }
+  updateAutoUI(); updateAutoPreview();
+}
+
+function updateAutoUI() {
+  const empty = isAutoEmpty();
+
+  document.getElementById('a-swap-section').style.display = empty ? 'none' : 'block';
+
+  if (empty) {
+    document.getElementById('a-usd-liq').style.height = '0%';
+    document.getElementById('a-rub-liq').style.height = '0%';
+    document.getElementById('a-usd-label').textContent = '$0';
+    document.getElementById('a-rub-label').textContent = '0₽';
+  } else {
+    const maxUsdVis = Math.max(2000, auto_.usd * 1.5);
+    const maxRubVis = Math.max(190000, auto_.rub * 1.5);
+    document.getElementById('a-usd-liq').style.height = Math.min(95, Math.max(5, (auto_.usd / maxUsdVis) * 100)) + '%';
+    document.getElementById('a-rub-liq').style.height = Math.min(95, Math.max(5, (auto_.rub / maxRubVis) * 100)) + '%';
+    document.getElementById('a-usd-label').textContent = '$' + auto_.usd.toLocaleString(undefined,{maximumFractionDigits:0});
+    document.getElementById('a-rub-label').textContent = auto_.rub.toLocaleString(undefined,{maximumFractionDigits:0}) + '₽';
+  }
+
+  const fb = document.getElementById('a-formula-box');
+  if (empty) {
+    fb.innerHTML = `<div style="color:var(--yellow);">⬆️ Автомат пуст — положи деньги, чтобы сформировать курс</div>`;
+  } else {
+    const rate = auto_.rub / auto_.usd;
+    fb.innerHTML = `
+      <div style="color:var(--text-dim); font-size:10px; margin-bottom:3px;">📐 Как получается курс:</div>
+      <div><b>Курс $</b> = ₽ ÷ $ = <span style="color:var(--accent2)">${auto_.rub.toLocaleString(undefined,{maximumFractionDigits:0})}</span> ÷ <span style="color:var(--accent)">${auto_.usd.toLocaleString(undefined,{maximumFractionDigits:0})}</span> = <b style="color:#fff;">${rate.toFixed(2)}₽</b></div>
+      <div style="margin-top:3px;"><b>K</b> = $ × ₽ = <span style="color:var(--accent)">${auto_.usd.toLocaleString(undefined,{maximumFractionDigits:0})}</span> × <span style="color:var(--accent2)">${auto_.rub.toLocaleString(undefined,{maximumFractionDigits:0})}</span> = <b>${auto_.k.toLocaleString(undefined,{maximumFractionDigits:0})}</b></div>
+    `;
+  }
+
+  // Liq hint
+  const liqHint = document.getElementById('a-liq-hint');
+  const rubInput = document.getElementById('a-liq-rub');
+  if (empty) {
+    liqHint.textContent = '🚨 Автомат пуст! Положи обе валюты — ТЫ задаёшь начальный курс.';
+    rubInput.readOnly = false;
+  } else {
+    liqHint.textContent = 'Добавь ещё денег по текущему курсу';
+    rubInput.readOnly = true;
+  }
+
+  updateAutoLiqPreview();
+
+  const rate2 = empty ? 0 : auto_.rub / auto_.usd;
+  document.getElementById('auto-info-grid').innerHTML = `
+    <div class="info-cell"><span class="info-cell-label">Доллары</span><span class="info-cell-value">${empty ? '—' : '$'+auto_.usd.toFixed(0)}</span></div>
+    <div class="info-cell"><span class="info-cell-label">Рубли</span><span class="info-cell-value">${empty ? '—' : auto_.rub.toLocaleString(undefined,{maximumFractionDigits:0})+'₽'}</span></div>
+    <div class="info-cell"><span class="info-cell-label">K</span><span class="info-cell-value">${empty ? '—' : auto_.k.toLocaleString(undefined,{maximumFractionDigits:0})}</span></div>
+    <div class="info-cell"><span class="info-cell-label">Курс</span><span class="info-cell-value">${empty ? '—' : rate2.toFixed(2)+'₽/$'}</span></div>
+  `;
+}
+
+// Auto Liquidity
+function updateAutoLiqPreview() {
+  const usdAmt = parseFloat(document.getElementById('a-liq-usd').value);
+  const rubField = document.getElementById('a-liq-rub');
+  const prev = document.getElementById('a-liq-preview');
+
+  if (isAutoEmpty()) {
+    const rubAmt = parseFloat(rubField.value);
+    if (!usdAmt || usdAmt <= 0 || !rubAmt || rubAmt <= 0) { prev.innerHTML = ''; return; }
+    const rate = rubAmt / usdAmt;
+    const newK = usdAmt * rubAmt;
+    prev.innerHTML = `Начальный курс: <b>${rate.toFixed(2)}₽/$</b> · K = ${newK.toLocaleString(undefined,{maximumFractionDigits:0})}`;
+  } else {
+    if (!usdAmt || usdAmt <= 0) { rubField.value = ''; prev.innerHTML = ''; return; }
+    const rate = auto_.rub / auto_.usd;
+    const rubNeeded = usdAmt * rate;
+    rubField.value = rubNeeded.toFixed(0);
+    const newK = (auto_.usd + usdAmt) * (auto_.rub + rubNeeded);
+    prev.innerHTML = `$${usdAmt} × ${rate.toFixed(2)}₽ = ${rubNeeded.toFixed(0)}₽ · K: ${auto_.k.toLocaleString(undefined,{maximumFractionDigits:0})} → ${newK.toLocaleString(undefined,{maximumFractionDigits:0})}`;
+  }
+}
+
+function addAutoLiq() {
+  const usdAmt = parseFloat(document.getElementById('a-liq-usd').value);
+  const rubAmt = parseFloat(document.getElementById('a-liq-rub').value);
+  if (!usdAmt || usdAmt <= 0 || !rubAmt || rubAmt <= 0) return;
+
+  if (isAutoEmpty()) {
+    auto_.usd = usdAmt;
+    auto_.rub = rubAmt;
+  } else {
+    auto_.usd += usdAmt;
+    auto_.rub += rubAmt;
+  }
+  auto_.k = auto_.usd * auto_.rub;
+  updateAutoUI(); updateAutoPreview();
+}
+
+function autoReset() {
+  auto_ = { usd: 0, rub: 0, k: 0 };
+  document.getElementById('a-liq-usd').value = '1000';
+  document.getElementById('a-liq-rub').value = '95000';
+  updateAutoUI(); updateAutoPreview();
+}
+
+// ============================================================
+// CURVE
+// ============================================================
+function drawCurve() {
+  const canvas = document.getElementById('curve-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.offsetWidth * dpr;
+  canvas.height = canvas.offsetHeight * dpr;
+  ctx.scale(dpr, dpr);
+  const W = canvas.offsetWidth, H = canvas.offsetHeight, pad = 50;
+  ctx.clearRect(0, 0, W, H);
+
+  if (isPoolEmpty()) {
+    ctx.fillStyle = '#555'; ctx.font = '16px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText('Добавь ликвидность — кривая появится здесь', W/2, H/2);
+    return;
+  }
+
+  ctx.strokeStyle = '#2a2d40'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(pad, pad); ctx.lineTo(pad, H-pad); ctx.lineTo(W-pad, H-pad); ctx.stroke();
+
+  ctx.fillStyle = '#8888a0'; ctx.font = '13px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('ETH в пуле (x)', W/2, H-8);
+  ctx.save(); ctx.translate(14, H/2); ctx.rotate(-Math.PI/2); ctx.fillText('USDC в пуле (y)', 0, 0); ctx.restore();
+
+  const maxX = Math.max(20, pool.eth * 2), maxY = Math.max(50000, pool.usdc * 2);
+  const toX = x => pad + (x/maxX)*(W-2*pad);
+  const toY = y => (H-pad) - (y/maxY)*(H-2*pad);
+
+  ctx.fillStyle = '#555'; ctx.font = '11px system-ui';
+  const xStep = Math.max(1, Math.round(maxX / 4));
+  const yStep = Math.max(1000, Math.round(maxY / 5 / 1000) * 1000);
+  for (let x = xStep; x <= maxX; x += xStep) { const cx2 = toX(x); ctx.beginPath(); ctx.moveTo(cx2,pad); ctx.lineTo(cx2,H-pad); ctx.strokeStyle='rgba(42,45,64,0.5)'; ctx.stroke(); ctx.textAlign='center'; ctx.fillText(x,cx2,H-pad+16); }
+  for (let y = yStep; y <= maxY; y += yStep) { const cy2 = toY(y); ctx.beginPath(); ctx.moveTo(pad,cy2); ctx.lineTo(W-pad,cy2); ctx.strokeStyle='rgba(42,45,64,0.5)'; ctx.stroke(); ctx.textAlign='right'; ctx.fillText((y/1000)+'k',pad-6,cy2+4); }
+
+  ctx.beginPath(); ctx.strokeStyle = 'rgba(239,68,68,0.5)'; ctx.lineWidth = 2; let first = true;
+  for (let x = pool.k/maxY; x <= maxX; x += 0.1) { const y = pool.k/x; if(y>maxY) continue; const cx=toX(x), cy=toY(y); if(first){ctx.moveTo(cx,cy);first=false;} else ctx.lineTo(cx,cy); }
+  ctx.stroke();
+
+  // Current point
+  const cx=toX(pool.eth), cy=toY(pool.usdc);
+  ctx.beginPath(); ctx.arc(cx,cy,7,0,Math.PI*2); ctx.fillStyle='#ef4444'; ctx.fill(); ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
+  ctx.fillStyle='#e8e8f0'; ctx.font='bold 12px system-ui'; ctx.textAlign='left';
+  ctx.fillText(`(${pool.eth.toFixed(1)}, ${(pool.usdc/1000).toFixed(1)}k)`, cx+12, cy-6);
+}
+
+// ============================================================
+// INIT
+// ============================================================
+renderOB();
+renderMenyaly();
+updatePoolUI();
+updatePoolPreview();
+updateAutoUI();
+updateAutoPreview();
+setTimeout(drawCurve, 100);
+window.addEventListener('resize', drawCurve);
+</script>
+</body>
+</html>

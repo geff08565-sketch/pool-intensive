@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Урок 8 — Диапазон: V2, V3 и концентрированная ликвидность</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #111111; --card: #1e1e1e; --card-hover: #2a2a2a;
+    --accent: #ef4444; --accent2: #f97316; --red: #ef4444; --green: #22c55e;
+    --text: #f5f5f5; --text-dim: #9ca3af; --border: #333333;
+    --yellow: #facc15; --orange: #f97316;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Montserrat',system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; position:relative; }
+
+  body::before {
+    content:''; position:fixed; top:0; left:0; width:100%; height:100%;
+    background-image:url("https://page.gensparksite.com/slides_images/9c76947ae75f1735c8d0a40301471dd9.webp");
+    background-size:cover; background-position:center;
+    opacity:0.15; z-index:0; pointer-events:none;
+  }
+  body::after {
+    content:''; position:fixed; top:0; left:0; width:100%; height:100%;
+    background-color:rgba(17,17,17,0.88); z-index:0; pointer-events:none;
+  }
+  body > * { position:relative; z-index:1; }
+
+  .header { text-align:center; padding:32px 20px 16px; }
+  .header .eyebrow { color:var(--accent); font-size:13px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:8px; display:flex; align-items:center; justify-content:center; gap:8px; }
+  .header h1 { font-size:28px; font-weight:800; color:#ffffff; letter-spacing:-0.01em; text-shadow:0 2px 12px rgba(0,0,0,0.5); }
+
+  .tabs { display:flex; justify-content:center; gap:8px; padding:16px 20px; flex-wrap:wrap; }
+  .tab-btn { padding:10px 24px; border:1px solid var(--border); border-radius:12px; background:var(--card); color:var(--text-dim); cursor:pointer; font-size:15px; font-weight:500; transition:all 0.2s; }
+  .tab-btn:hover { background:var(--card-hover); color:var(--text); }
+  .tab-btn.active { background:var(--accent); color:white; border-color:var(--accent); font-weight:700; }
+  .tab-content { display:none; padding:0 20px 40px; max-width:1300px; margin:0 auto; }
+  .tab-content.active { display:block; }
+
+  .scene { border-radius:20px; padding:30px; }
+  .scene-t1 { background:linear-gradient(180deg,#1f1f1f,#171717); }
+  .scene-t2 { background:linear-gradient(180deg,#1f1f1f,#171717); }
+  .scene-title { text-align:center; font-size:20px; font-weight:600; margin-bottom:8px; }
+  .scene-sub { text-align:center; color:var(--text-dim); font-size:14px; margin-bottom:24px; }
+
+  .panel { background:var(--card); border-radius:16px; padding:24px; border:1px solid var(--border); }
+  .panel h3 { font-size:17px; margin-bottom:16px; }
+  .panel-label { display:inline-block; font-size:11px; font-weight:700; padding:3px 10px; border-radius:6px; margin-bottom:12px; text-transform:uppercase; letter-spacing:0.5px; }
+  .label-v2 { background:var(--orange); color:#000; }
+  .label-v3 { background:var(--accent); color:#fff; }
+  .label-real { background:var(--accent); color:#fff; }
+
+  .side-by-side { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  @media(max-width:900px) { .side-by-side { grid-template-columns:1fr; } }
+
+  .hint-box { margin-top:20px; padding:16px 20px; border-radius:12px; font-size:14px; text-align:center; }
+  .hint-yellow { background:rgba(255,209,102,0.08); border:1px solid rgba(255,209,102,0.2); color:var(--yellow); }
+  .hint-purple { background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.2); color:#fca5a5; }
+
+  .btn { padding:12px 32px; border:none; border-radius:12px; font-size:15px; font-weight:600; cursor:pointer; transition:all 0.2s; }
+  .btn:hover { transform:translateY(-1px); }
+  .btn-accent { background:var(--accent); color:white; font-weight:700; }
+  .btn-reset { background:var(--card); color:var(--text-dim); border:1px solid var(--border); padding:10px 20px; font-size:13px; }
+
+  /* ===== TAB 1: V2 vs V3 ===== */
+  .liq-bar-container { position:relative; height:120px; border-radius:12px; overflow:hidden; background:rgba(0,0,0,0.3); margin:16px 0; border:1px solid var(--border); }
+  .liq-bar-bg { position:absolute; bottom:0; left:0; right:0; transition:all 0.5s; }
+  .liq-bar-v2 { height:8px; background:linear-gradient(90deg,rgba(255,159,67,0.15),rgba(255,159,67,0.25),rgba(255,159,67,0.15)); }
+  .liq-bar-v3 { background:rgba(239,68,68,0.5); border-radius:4px; }
+  .liq-price-marker { position:absolute; top:0; bottom:0; width:2px; background:var(--yellow); z-index:2; }
+  .liq-price-label { position:absolute; top:4px; transform:translateX(-50%); font-size:10px; color:var(--yellow); white-space:nowrap; font-weight:600; }
+  .liq-range-label { position:absolute; bottom:4px; font-size:10px; color:var(--text-dim); }
+  .liq-active-zone { position:absolute; top:0; bottom:0; border:1px dashed rgba(34,197,94,0.4); background:rgba(34,197,94,0.05); }
+
+  .fee-compare { display:flex; justify-content:center; gap:40px; margin:16px 0; }
+  .fee-item { text-align:center; }
+  .fee-value { font-size:28px; font-weight:700; }
+  .fee-label { font-size:12px; color:var(--text-dim); margin-top:4px; }
+
+  /* ===== TAB 2: POSITION SIM ===== */
+  .price-track { position:relative; margin:30px 20px 10px; }
+  .price-track-bar { height:40px; border-radius:10px; background:rgba(255,255,255,0.05); border:1px solid var(--border); position:relative; overflow:visible; }
+  .price-range-zone { position:absolute; top:0; bottom:0; border-radius:8px; transition:left 0.3s, width 0.3s; }
+  .price-range-zone.in-range { background:rgba(34,197,94,0.15); border:1px solid rgba(34,197,94,0.3); }
+  .price-range-zone.out-range { background:rgba(255,77,106,0.1); border:1px dashed rgba(255,77,106,0.3); }
+
+  .price-slider-wrap { margin:0 20px; }
+  .price-slider { width:100%; -webkit-appearance:none; height:6px; border-radius:3px; background:linear-gradient(90deg,var(--red),var(--yellow),var(--green),var(--yellow),var(--red)); outline:none; cursor:pointer; }
+  .price-slider::-webkit-slider-thumb { -webkit-appearance:none; width:24px; height:24px; border-radius:50%; background:white; border:3px solid var(--accent); cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.3); }
+
+  .price-labels { display:flex; justify-content:space-between; margin:4px 20px 0; font-size:11px; color:var(--text-dim); }
+
+  .position-display { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-top:24px; }
+  @media(max-width:800px) { .position-display { grid-template-columns:1fr; } }
+
+  .tank-pair { display:flex; align-items:flex-end; justify-content:center; gap:16px; }
+  .sim-tank { width:80px; height:160px; border:2px solid var(--border); border-radius:0 0 10px 10px; border-top:none; position:relative; overflow:hidden; background:rgba(0,0,0,0.3); }
+  .sim-liquid { position:absolute; bottom:0; left:0; right:0; transition:height 0.3s ease; border-radius:0 0 8px 8px; }
+  .sim-liq-eth { background:linear-gradient(180deg,rgba(239,68,68,0.5),rgba(239,68,68,0.85)); }
+  .sim-liq-usdc { background:linear-gradient(180deg,rgba(34,197,94,0.5),rgba(34,197,94,0.85)); }
+  .sim-tank-label { text-align:center; font-weight:600; font-size:13px; margin-bottom:4px; }
+  .sim-tank-amount { text-align:center; font-size:12px; color:var(--text-dim); margin-bottom:4px; }
+
+  .ratio-bar { height:24px; border-radius:6px; overflow:hidden; display:flex; margin:8px 0; }
+  .ratio-eth { background:var(--accent); transition:width 0.3s; height:100%; }
+  .ratio-usdc { background:var(--accent2); transition:width 0.3s; height:100%; }
+  .ratio-labels { display:flex; justify-content:space-between; font-size:12px; }
+
+  .status-badge { display:inline-block; padding:8px 16px; border-radius:8px; font-weight:600; font-size:14px; text-align:center; width:100%; }
+  .status-in { background:rgba(34,197,94,0.15); color:var(--green); border:1px solid rgba(34,197,94,0.3); }
+  .status-out { background:rgba(255,77,106,0.15); color:var(--red); border:1px solid rgba(255,77,106,0.3); }
+
+  .config-section { background:var(--card); border-radius:16px; padding:20px; margin-top:24px; }
+  .config-section h3 { font-size:16px; margin-bottom:14px; }
+  .config-row { display:flex; align-items:center; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
+  .config-row label { font-size:13px; color:var(--text-dim); min-width:120px; }
+  .config-row input[type=range] { flex:1; min-width:150px; }
+  .config-row .val { font-weight:600; min-width:80px; font-size:14px; }
+  input[type=number] { padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:14px; width:100px; text-align:center; }
+
+  .formula-box { background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.15); border-radius:10px; padding:12px; font-size:13px; line-height:1.8; text-align:center; margin-top:16px; }
+
+  /* Sim steps */
+  .sim-steps { margin-top:24px; }
+  .sim-step { display:flex; align-items:center; gap:12px; padding:10px 16px; border-radius:10px; margin-bottom:8px; font-size:13px; border:1px solid var(--border); background:var(--card); transition:all 0.3s; }
+  .sim-step.active { border-color:var(--accent); background:rgba(239,68,68,0.1); }
+  .sim-step.done { opacity:0.6; }
+  .sim-step-num { width:28px; height:28px; border-radius:50%; background:var(--border); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; flex-shrink:0; }
+  .sim-step.active .sim-step-num { background:var(--accent); color:white; }
+
+  /* ===== TAB 3: Comparison ===== */
+  .compare-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  @media(max-width:768px) { .compare-grid { grid-template-columns:1fr; } }
+  .compare-card { background:var(--card); border-radius:16px; padding:24px; }
+  .compare-card h3 { font-size:18px; margin-bottom:16px; }
+  .compare-item { padding:12px 0; border-bottom:1px solid var(--border); font-size:14px; line-height:1.6; }
+  .compare-item:last-child { border-bottom:none; }
+  .compare-label { color:var(--text-dim); font-size:12px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
+
+  @keyframes slideIn { from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);} }
+  .slide-in { animation:slideIn 0.4s ease-out; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="eyebrow"><i class="fa-solid fa-circle" style="font-size:8px;"></i> Урок 8 · Модуль «Механика»</div>
+  <h1>Диапазон: V2, V3 и концентрированная ликвидность</h1>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('v2v3',this)">📊 V2 vs V3</button>
+  <button class="tab-btn" onclick="switchTab('sim',this)">🎛️ Как двигаются токены</button>
+  <button class="tab-btn" onclick="switchTab('calc',this)">📝 Мой калькулятор</button>
+  <button class="tab-btn" onclick="switchTab('compare',this)">⚖️ Сравнение</button>
+</div>
+
+<!-- ==================== ТАБ 1: V2 vs V3 ==================== -->
+<div id="tab-v2v3" class="tab-content active">
+  <div class="scene scene-t1">
+    <div class="scene-title">📊 V2 vs V3: куда идут твои деньги?</div>
+    <div class="scene-sub">Одна и та же сумма — но совершенно разный результат</div>
+
+    <div class="side-by-side">
+      <!-- V2 -->
+      <div class="panel">
+        <div class="panel-label label-v2">Uniswap V2</div>
+        <h3>🌊 Ликвидность размазана от $0 до ∞</h3>
+        <div class="liq-bar-container" id="v2-bar">
+          <div class="liq-bar-bg liq-bar-v2" style="height:8px;"></div>
+          <div class="liq-price-marker" id="v2-marker" style="left:50%;"><div class="liq-price-label">$2,500</div></div>
+          <div class="liq-active-zone" style="left:45%;width:10%;top:0;bottom:0;">
+            <div class="liq-range-label" style="left:50%;transform:translateX(-50%);bottom:14px;color:var(--green);font-size:9px;">тут торгуют</div>
+          </div>
+          <div class="liq-range-label" style="left:4px;">$0</div>
+          <div class="liq-range-label" style="right:4px;">$∞</div>
+        </div>
+        <div style="text-align:center; font-size:13px; color:var(--red);">99% ликвидности простаивает 😴</div>
+        <div style="text-align:center; color:var(--text-dim); font-size:12px; margin-top:8px;">
+          Аналогия: ты поставил киоск на <b>каждой улице</b> города.<br>Клиенты ходят на одну. 99 киосков пустуют.
+        </div>
+      </div>
+
+      <!-- V3 -->
+      <div class="panel">
+        <div class="panel-label label-v3">Uniswap V3</div>
+        <h3>🎯 Ликвидность сконцентрирована в диапазоне</h3>
+        <div class="liq-bar-container" id="v3-bar">
+          <div class="liq-bar-bg liq-bar-v3" id="v3-liq-block" style="height:90px; position:absolute; bottom:0;"></div>
+          <div class="liq-price-marker" id="v3-marker" style="left:50%;"><div class="liq-price-label">$2,500</div></div>
+          <div class="liq-range-label" style="left:4px;">$0</div>
+          <div class="liq-range-label" style="right:4px;">$∞</div>
+        </div>
+        <div style="text-align:center; font-size:13px; color:var(--green);">100% ликвидности работает 🔥</div>
+        <div style="text-align:center; color:var(--text-dim); font-size:12px; margin-top:8px;">
+          Аналогия: ты поставил киоск <b>на той улице, где ходят клиенты</b>.<br>Все деньги → один поток.
+        </div>
+      </div>
+    </div>
+
+    <!-- Комиссии -->
+    <div class="panel" style="margin-top:24px;">
+      <h3 style="text-align:center;">💰 Сравни доход с одной и той же суммы</h3>
+      <div class="config-row" style="justify-content:center;">
+        <label>Твой бюджет:</label>
+        <input type="number" id="v-budget" value="10000" min="100" step="100" onchange="updateV2V3()">
+        <span style="font-size:14px;">USDC</span>
+      </div>
+      <div class="config-row" style="justify-content:center;">
+        <label>Диапазон V3:</label>
+        <span class="val" id="v3-range-label">$2,000 – $3,000</span>
+        <button class="btn-reset" onclick="widenV3()">Шире</button>
+        <button class="btn-reset" onclick="narrowV3()">Уже</button>
+      </div>
+      <div class="fee-compare" id="fee-compare">
+        <div class="fee-item">
+          <div class="fee-value" style="color:var(--orange);" id="v2-fee">$0.41</div>
+          <div class="fee-label">V2: комиссии / час</div>
+        </div>
+        <div class="fee-item">
+          <div class="fee-value" style="color:var(--accent);" id="v3-fee">$4.10</div>
+          <div class="fee-label">V3: комиссии / час</div>
+        </div>
+        <div class="fee-item">
+          <div class="fee-value" style="color:var(--green);" id="v-multiplier">×10</div>
+          <div class="fee-label">Разница</div>
+        </div>
+      </div>
+      <div style="text-align:center; font-size:12px; color:var(--text-dim);">* Условный расчёт для наглядности. Реальные комиссии зависят от объёма торгов.</div>
+    </div>
+
+    <div class="hint-box hint-yellow">
+      💡 <b>Компромисс V3:</b> больше комиссий, но нужно следить за диапазоном. Если цена уйдёт — ты перестаёшь зарабатывать.
+    </div>
+  </div>
+</div>
+
+<!-- ==================== ТАБ 2: СИМУЛЯТОР ==================== -->
+<div id="tab-sim" class="tab-content">
+  <div class="scene scene-t2">
+    <div class="scene-title">🎛️ Как цена двигает твои токены</div>
+    <div class="scene-sub">Двигай ползунок — смотри что происходит с позицией</div>
+
+    <!-- Настройки позиции -->
+    <div class="config-section">
+      <h3>⚙️ Настрой позицию</h3>
+      <div class="config-row">
+        <label>Внесено:</label>
+        <input type="number" id="sim-deposit" value="10000" min="100" step="100" onchange="recalcSim()">
+        <span style="font-size:13px;">$ (в обоих токенах)</span>
+      </div>
+      <div class="config-row">
+        <label>Нижняя граница:</label>
+        <input type="range" id="sim-lower" min="500" max="4500" value="2000" step="50" oninput="recalcSim()">
+        <span class="val" id="sim-lower-val">$2,000</span>
+      </div>
+      <div class="config-row">
+        <label>Верхняя граница:</label>
+        <input type="range" id="sim-upper" min="500" max="4500" value="3000" step="50" oninput="recalcSim()">
+        <span class="val" id="sim-upper-val">$3,000</span>
+      </div>
+      <div class="config-row">
+        <label>Цена входа:</label>
+        <span class="val">$2,500 (ETH)</span>
+      </div>
+    </div>
+
+    <!-- Ценовая шкала + ползунок -->
+    <div class="panel" style="margin-top:24px;">
+      <h3>📍 Текущая цена ETH: <span id="sim-price-display" style="color:var(--yellow);">$2,500</span></h3>
+      <div class="price-slider-wrap">
+        <input type="range" class="price-slider" id="sim-price" min="500" max="4500" value="2500" step="10" oninput="onPriceMove()">
+      </div>
+      <div class="price-labels">
+        <span>$500</span>
+        <span id="sim-range-low-mark">▲ $2,000</span>
+        <span id="sim-range-hi-mark">▲ $3,000</span>
+        <span>$4,500</span>
+      </div>
+
+      <!-- Статус -->
+      <div style="text-align:center; margin-top:16px;">
+        <div class="status-badge" id="sim-status">✅ В диапазоне — зарабатываешь комиссии</div>
+      </div>
+    </div>
+
+    <!-- Бассейны + цифры -->
+    <div class="position-display">
+      <!-- Бассейны -->
+      <div class="panel" style="text-align:center;">
+        <h3>💧 Твоя позиция</h3>
+        <div class="tank-pair">
+          <div>
+            <div class="sim-tank-label" style="color:var(--accent);">ETH</div>
+            <div class="sim-tank-amount" id="sim-eth-label">2.00</div>
+            <div class="sim-tank"><div class="sim-liquid sim-liq-eth" id="sim-eth-liq" style="height:50%;"></div></div>
+          </div>
+          <div style="align-self:center; font-size:18px; color:var(--text-dim);">⇄</div>
+          <div>
+            <div class="sim-tank-label" style="color:var(--accent2);">USDC</div>
+            <div class="sim-tank-amount" id="sim-usdc-label">5,000</div>
+            <div class="sim-tank"><div class="sim-liquid sim-liq-usdc" id="sim-usdc-liq" style="height:50%;"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Пропорция -->
+      <div class="panel">
+        <h3>📊 Пропорция</h3>
+        <div class="ratio-bar">
+          <div class="ratio-eth" id="ratio-eth" style="width:50%;"></div>
+          <div class="ratio-usdc" id="ratio-usdc" style="width:50%;"></div>
+        </div>
+        <div class="ratio-labels">
+          <span style="color:var(--accent);" id="ratio-eth-pct">50% ETH</span>
+          <span style="color:var(--accent2);" id="ratio-usdc-pct">50% USDC</span>
+        </div>
+        <div style="margin-top:16px; font-size:13px; line-height:1.6;" id="sim-values">
+          <div>ETH: <b id="sv-eth">2.0000</b> ($<span id="sv-eth-usd">5,000</span>)</div>
+          <div>USDC: <b id="sv-usdc">5,000.00</b></div>
+          <div>Всего: <b id="sv-total">$10,000</b></div>
+        </div>
+      </div>
+
+      <!-- Формула -->
+      <div class="panel">
+        <h3>📐 Математика</h3>
+        <div id="sim-formula" style="font-size:12px; line-height:1.8; color:var(--text-dim);"></div>
+      </div>
+    </div>
+
+    <!-- Пошаговая симуляция -->
+    <div class="config-section" style="margin-top:24px;">
+      <h3>🎬 Пошаговая симуляция</h3>
+      <div style="text-align:center; margin-bottom:12px;">
+        <button class="btn btn-accent" onclick="runSimStep()" id="sim-step-btn">▶ Следующий шаг</button>
+        <button class="btn btn-reset" onclick="resetSim()">↩ Сначала</button>
+      </div>
+      <div class="sim-steps" id="sim-steps"></div>
+    </div>
+
+    <div class="hint-box hint-purple">
+      💡 <b>Заметь:</b> пул автоматически «продаёт» растущий актив и «покупает» падающий. Цена выше → у тебя больше USDC. Цена ниже → больше ETH. Именно так возникает Impermanent Loss (следующий урок).
+    </div>
+  </div>
+</div>
+
+<!-- ==================== ТАБ 3: КАЛЬКУЛЯТОР ==================== -->
+<div id="tab-calc" class="tab-content">
+  <div class="scene scene-t2">
+    <div class="scene-title">📝 Рассчитай свою позицию</div>
+    <div class="scene-sub">Введи данные своей реальной позиции — посмотри что будет на границах диапазона</div>
+
+    <!-- Ввод данных -->
+    <div class="config-section">
+      <h3>⚙️ Твоя позиция</h3>
+
+      <div class="config-row">
+        <label>Внёс ETH:</label>
+        <input type="number" id="calc-eth" value="0.5" min="0" step="0.001" onchange="calcPosition()">
+      </div>
+      <div class="config-row">
+        <label>Внёс USDC:</label>
+        <input type="number" id="calc-usdc" value="1250" min="0" step="1" onchange="calcPosition()">
+      </div>
+      <div class="config-row">
+        <label>Цена ETH при входе:</label>
+        <input type="number" id="calc-entry-price" value="2500" min="1" step="1" onchange="calcPosition()">
+        <span style="font-size:13px;">$</span>
+      </div>
+      <div class="config-row">
+        <label>Нижняя граница:</label>
+        <input type="number" id="calc-lower" value="2000" min="1" step="10" onchange="calcPosition()">
+        <span style="font-size:13px;">$</span>
+      </div>
+      <div class="config-row">
+        <label>Верхняя граница:</label>
+        <input type="number" id="calc-upper" value="3000" min="1" step="10" onchange="calcPosition()">
+        <span style="font-size:13px;">$</span>
+      </div>
+
+      <div id="calc-entry-info" style="margin-top:12px; padding:12px; background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.15); border-radius:10px; font-size:13px; line-height:1.8; text-align:center;"></div>
+    </div>
+
+    <!-- Результаты: 3 сценария -->
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-top:24px;">
+
+      <!-- Текущее -->
+      <div class="panel" id="calc-current" style="border-color:rgba(239,68,68,0.3);">
+        <div style="text-align:center;">
+          <div class="panel-label label-v3">СЕЙЧАС (при входе)</div>
+          <h3 style="margin-top:8px;">📍 Цена: <span id="cc-price">$2,500</span></h3>
+          <div class="status-badge status-in" style="margin:12px 0;">✅ В диапазоне</div>
+          <div style="font-size:14px; line-height:2;">
+            <div>ETH: <b id="cc-eth">0.5000</b></div>
+            <div style="font-size:12px; color:var(--text-dim);">= $<span id="cc-eth-usd">1,250</span></div>
+            <div>USDC: <b id="cc-usdc">1,250.00</b></div>
+            <div style="margin-top:8px; border-top:1px solid var(--border); padding-top:8px;">
+              Всего: <b style="font-size:18px;" id="cc-total">$2,500</b>
+            </div>
+          </div>
+          <div class="ratio-bar" style="margin-top:12px;">
+            <div class="ratio-eth" id="cc-ratio-eth" style="width:50%;"></div>
+            <div class="ratio-usdc" id="cc-ratio-usdc" style="width:50%;"></div>
+          </div>
+          <div class="ratio-labels">
+            <span style="color:var(--accent);" id="cc-pct-eth">50% ETH</span>
+            <span style="color:var(--accent2);" id="cc-pct-usdc">50% USDC</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Выход вверх -->
+      <div class="panel" id="calc-up" style="border-color:rgba(34,197,94,0.3);">
+        <div style="text-align:center;">
+          <div class="panel-label" style="background:var(--green);color:#000;">ВЫХОД ВВЕРХ ↑</div>
+          <h3 style="margin-top:8px;">📈 Цена: <span id="cu-price">$3,000</span></h3>
+          <div class="status-badge status-out" style="margin:12px 0;">100% USDC, 0% ETH</div>
+          <div style="font-size:14px; line-height:2;">
+            <div>ETH: <b id="cu-eth">0.0000</b></div>
+            <div style="font-size:12px; color:var(--text-dim);">= $0</div>
+            <div>USDC: <b id="cu-usdc">0</b></div>
+            <div style="margin-top:8px; border-top:1px solid var(--border); padding-top:8px;">
+              Всего: <b style="font-size:18px;" id="cu-total">$0</b>
+            </div>
+          </div>
+          <div class="ratio-bar" style="margin-top:12px;">
+            <div class="ratio-eth" id="cu-ratio-eth" style="width:0%;"></div>
+            <div class="ratio-usdc" id="cu-ratio-usdc" style="width:100%;"></div>
+          </div>
+          <div class="ratio-labels">
+            <span style="color:var(--accent);" id="cu-pct-eth">0% ETH</span>
+            <span style="color:var(--accent2);" id="cu-pct-usdc">100% USDC</span>
+          </div>
+          <div id="cu-diff" style="margin-top:12px; padding:8px; border-radius:8px; font-size:12px; background:rgba(34,197,94,0.08); border:1px solid rgba(34,197,94,0.15);"></div>
+        </div>
+      </div>
+
+      <!-- Выход вниз -->
+      <div class="panel" id="calc-down" style="border-color:rgba(255,77,106,0.3);">
+        <div style="text-align:center;">
+          <div class="panel-label" style="background:var(--red);color:#fff;">ВЫХОД ВНИЗ ↓</div>
+          <h3 style="margin-top:8px;">📉 Цена: <span id="cd-price">$2,000</span></h3>
+          <div class="status-badge status-out" style="margin:12px 0;">100% ETH, 0% USDC</div>
+          <div style="font-size:14px; line-height:2;">
+            <div>ETH: <b id="cd-eth">0.0000</b></div>
+            <div style="font-size:12px; color:var(--text-dim);">= $<span id="cd-eth-usd">0</span></div>
+            <div>USDC: <b id="cd-usdc">0</b></div>
+            <div style="margin-top:8px; border-top:1px solid var(--border); padding-top:8px;">
+              Всего: <b style="font-size:18px;" id="cd-total">$0</b>
+            </div>
+          </div>
+          <div class="ratio-bar" style="margin-top:12px;">
+            <div class="ratio-eth" id="cd-ratio-eth" style="width:100%;"></div>
+            <div class="ratio-usdc" id="cd-ratio-usdc" style="width:0%;"></div>
+          </div>
+          <div class="ratio-labels">
+            <span style="color:var(--accent);" id="cd-pct-eth">100% ETH</span>
+            <span style="color:var(--accent2);" id="cd-pct-usdc">0% USDC</span>
+          </div>
+          <div id="cd-diff" style="margin-top:12px; padding:8px; border-radius:8px; font-size:12px; background:rgba(255,77,106,0.08); border:1px solid rgba(255,77,106,0.15);"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Произвольная цена — ползунок -->
+    <div class="panel" style="margin-top:24px;">
+      <h3>🔍 Двигай цену — смотри что будет с позицией</h3>
+      <div style="text-align:center; font-size:18px; margin-bottom:12px;">
+        Цена ETH: <b style="color:var(--yellow);" id="calc-slider-display">$2,500</b>
+      </div>
+      <div class="price-slider-wrap">
+        <input type="range" class="price-slider" id="calc-custom-price" min="500" max="5000" value="2500" step="10" oninput="calcCustom()">
+      </div>
+      <div class="price-labels">
+        <span>$500</span>
+        <span>$5,000</span>
+      </div>
+      <div style="text-align:center; margin-top:12px;">
+        <div class="status-badge" id="calc-slider-status">✅ В диапазоне</div>
+      </div>
+
+      <!-- Бассейны + цифры -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:20px;">
+        <div style="text-align:center;">
+          <div class="tank-pair">
+            <div>
+              <div class="sim-tank-label" style="color:var(--accent);">ETH</div>
+              <div class="sim-tank-amount" id="cs-eth-label">0.50</div>
+              <div class="sim-tank"><div class="sim-liquid sim-liq-eth" id="cs-eth-liq" style="height:50%;"></div></div>
+            </div>
+            <div style="align-self:center; font-size:18px; color:var(--text-dim);">⇄</div>
+            <div>
+              <div class="sim-tank-label" style="color:var(--accent2);">USDC</div>
+              <div class="sim-tank-amount" id="cs-usdc-label">1,250</div>
+              <div class="sim-tank"><div class="sim-liquid sim-liq-usdc" id="cs-usdc-liq" style="height:50%;"></div></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="ratio-bar">
+            <div class="ratio-eth" id="cs-ratio-eth" style="width:50%;"></div>
+            <div class="ratio-usdc" id="cs-ratio-usdc" style="width:50%;"></div>
+          </div>
+          <div class="ratio-labels">
+            <span style="color:var(--accent);" id="cs-pct-eth">50% ETH</span>
+            <span style="color:var(--accent2);" id="cs-pct-usdc">50% USDC</span>
+          </div>
+          <div id="calc-custom-result" style="margin-top:12px; font-size:14px; line-height:1.8;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Формулы -->
+    <div class="formula-box" style="margin-top:24px;">
+      <div style="color:var(--text-dim); font-size:11px; margin-bottom:6px;">📐 Формулы V3 (для тех кто хочет разобраться):</div>
+      <div style="font-size:13px; line-height:2;">
+        <b>L</b> (ликвидность) = рассчитывается из внесённых токенов и диапазона<br>
+        <b>ETH в позиции</b> = L × (1/√P − 1/√Pb) — когда цена в диапазоне<br>
+        <b>USDC в позиции</b> = L × (√P − √Pa) — когда цена в диапазоне<br>
+        <b>Цена ≥ верхней</b> → ETH = 0, USDC = L × (√Pb − √Pa)<br>
+        <b>Цена ≤ нижней</b> → ETH = L × (1/√Pa − 1/√Pb), USDC = 0
+      </div>
+    </div>
+
+    <div class="hint-box hint-yellow" style="margin-top:24px;">
+      💡 <b>Домашнее задание:</b> Введи данные СВОЕЙ позиции (или той, которую планируешь открыть). Запиши: сколько токенов будет при выходе вверх и вниз. Отправь скриншот в личку.
+    </div>
+  </div>
+</div>
+
+<!-- ==================== ТАБ 4: СРАВНЕНИЕ ==================== -->
+<div id="tab-compare" class="tab-content">
+  <div class="scene-title" style="text-align:center; margin-bottom:24px;">⚖️ V2 vs V3</div>
+
+  <div class="compare-grid">
+    <div class="compare-card" style="border:1px solid rgba(255,159,67,0.3);">
+      <h3>🌊 Uniswap V2</h3>
+      <div class="compare-item"><div class="compare-label">Диапазон</div>От $0 до бесконечности — нельзя выбрать.</div>
+      <div class="compare-item"><div class="compare-label">Эффективность</div>Низкая. 99% ликвидности простаивает.</div>
+      <div class="compare-item"><div class="compare-label">Управление</div>Положил и забыл. Руками ничего не нужно.</div>
+      <div class="compare-item"><div class="compare-label">Риск</div>Ниже — ты никогда не выходишь из диапазона.</div>
+      <div class="compare-item"><div class="compare-label">Пропорция</div>Всегда 50/50 при входе.</div>
+      <div class="compare-item"><div class="compare-label">Для кого</div>«Положил и забыл». Минимум внимания.</div>
+    </div>
+    <div class="compare-card" style="border:1px solid rgba(239,68,68,0.3);">
+      <h3>🎯 Uniswap V3</h3>
+      <div class="compare-item"><div class="compare-label">Диапазон</div>Ты выбираешь сам: узкий или широкий.</div>
+      <div class="compare-item"><div class="compare-label">Эффективность</div>Высокая. Все деньги работают в твоём коридоре.</div>
+      <div class="compare-item"><div class="compare-label">Управление</div>Нужно следить. 5-10 мин в день.</div>
+      <div class="compare-item"><div class="compare-label">Риск</div>Выше — цена может выйти за диапазон.</div>
+      <div class="compare-item"><div class="compare-label">Пропорция</div>Зависит от диапазона. Может быть 70/30, 80/20.</div>
+      <div class="compare-item"><div class="compare-label">Для кого</div>Активное управление. Больше дохода = больше внимания.</div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:24px; text-align:center;">
+    <h3>🔑 Широкий vs Узкий диапазон</h3>
+    <div class="side-by-side" style="margin-top:16px; text-align:left;">
+      <div>
+        <div style="font-weight:600; color:var(--green); margin-bottom:8px;">🟢 Широкий ($1,500–$4,000)</div>
+        <div style="font-size:14px; line-height:1.6;">
+          • Меньше комиссий на единицу ликвидности<br>
+          • Реже выходишь из диапазона<br>
+          • Спокойнее, меньше стресса<br>
+          • <b>Лучше для начала</b>
+        </div>
+      </div>
+      <div>
+        <div style="font-weight:600; color:var(--orange); margin-bottom:8px;">🟠 Узкий ($2,400–$2,600)</div>
+        <div style="font-size:14px; line-height:1.6;">
+          • Больше комиссий (концентрация!)<br>
+          • Часто выходишь — нужно ребалансить<br>
+          • Для опытных, кто следит за рынком<br>
+          • <b>Выше доход = выше риск</b>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hint-box hint-yellow" style="margin-top:24px;">
+    💡 <b>Золотое правило для новичков:</b> ±20-30% от текущей цены. Не слишком узко, не слишком широко. С опытом сузишь.
+  </div>
+</div>
+
+<script>
+// ============================================================
+// TAB SWITCHING
+// ============================================================
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (id === 'sim') recalcSim();
+}
+
+// ============================================================
+// TAB 1: V2 vs V3
+// ============================================================
+let v3Lower = 2000, v3Upper = 3000;
+const ENTRY_PRICE = 2500;
+
+function updateV2V3() {
+  const budget = parseFloat(document.getElementById('v-budget').value) || 10000;
+  document.getElementById('v3-range-label').textContent = `$${v3Lower.toLocaleString()} – $${v3Upper.toLocaleString()}`;
+
+  // V3 block position (bar is 0-5000 mapped to 0-100%)
+  const lo = (v3Lower / 5000) * 100;
+  const hi = (v3Upper / 5000) * 100;
+  const block = document.getElementById('v3-liq-block');
+  block.style.left = lo + '%';
+  block.style.width = (hi - lo) + '%';
+
+  // Fee calc (simplified: V3 concentrates by ratio fullRange/selectedRange)
+  const fullRange = 5000;
+  const v3Range = v3Upper - v3Lower;
+  const concentration = fullRange / v3Range;
+  const baseHourly = budget * 0.00004; // ~0.004% per hour base (made up for demo)
+  const v2Fee = baseHourly;
+  const v3Fee = baseHourly * concentration;
+  const mult = concentration;
+
+  document.getElementById('v2-fee').textContent = '$' + v2Fee.toFixed(2);
+  document.getElementById('v3-fee').textContent = '$' + v3Fee.toFixed(2);
+  document.getElementById('v-multiplier').textContent = '×' + mult.toFixed(1);
+}
+
+function widenV3() {
+  v3Lower = Math.max(500, v3Lower - 250);
+  v3Upper = Math.min(4500, v3Upper + 250);
+  updateV2V3();
+}
+function narrowV3() {
+  if (v3Upper - v3Lower > 200) {
+    v3Lower = Math.min(v3Lower + 125, ENTRY_PRICE - 100);
+    v3Upper = Math.max(v3Upper - 125, ENTRY_PRICE + 100);
+  }
+  updateV2V3();
+}
+
+// ============================================================
+// TAB 2: POSITION SIMULATOR
+// ============================================================
+let simCurrentStep = -1;
+const SIM_STEPS = [
+  { price: 2500, label: 'Вход: цена $2,500 — старт позиции' },
+  { price: 2800, label: 'Цена выросла до $2,800 — ETH продаётся' },
+  { price: 3100, label: 'Цена $3,100 — ВЫШЕ диапазона! 100% USDC' },
+  { price: 2700, label: 'Цена вернулась $2,700 — снова в диапазоне' },
+  { price: 2000, label: 'Падение до $2,000 — НИЖЕ диапазона! 100% ETH' },
+];
+
+function getV3Position(price, lower, upper, totalValueAtEntry, entryPrice) {
+  // Uniswap V3 math
+  const sqrtP = Math.sqrt(price);
+  const sqrtPa = Math.sqrt(lower);
+  const sqrtPb = Math.sqrt(upper);
+  const sqrtEntry = Math.sqrt(entryPrice);
+
+  // Calculate L from entry conditions
+  // At entry: V = L * (sqrtEntry - sqrtPa) + L * entryPrice * (1/sqrtEntry - 1/sqrtPb)
+  // V = L * ((sqrtEntry - sqrtPa) + entryPrice * (1/sqrtEntry - 1/sqrtPb))
+  const L = totalValueAtEntry / ((sqrtEntry - sqrtPa) + entryPrice * (1/sqrtEntry - 1/sqrtPb));
+
+  let ethAmt, usdcAmt;
+
+  if (price <= lower) {
+    // Below range: all ETH
+    ethAmt = L * (1/sqrtPa - 1/sqrtPb);
+    usdcAmt = 0;
+  } else if (price >= upper) {
+    // Above range: all USDC
+    ethAmt = 0;
+    usdcAmt = L * (sqrtPb - sqrtPa);
+  } else {
+    // In range
+    ethAmt = L * (1/sqrtP - 1/sqrtPb);
+    usdcAmt = L * (sqrtP - sqrtPa);
+  }
+
+  const ethValue = ethAmt * price;
+  const totalValue = ethValue + usdcAmt;
+  const ethPct = totalValue > 0 ? (ethValue / totalValue) * 100 : 50;
+  const inRange = price >= lower && price <= upper;
+
+  return { ethAmt, usdcAmt, ethValue, totalValue, ethPct, inRange, L };
+}
+
+function recalcSim() {
+  const lower = parseInt(document.getElementById('sim-lower').value);
+  const upper = parseInt(document.getElementById('sim-upper').value);
+
+  // Ensure lower < upper
+  if (lower >= upper - 100) {
+    document.getElementById('sim-lower').value = upper - 100;
+  }
+
+  document.getElementById('sim-lower-val').textContent = '$' + lower.toLocaleString();
+  document.getElementById('sim-upper-val').textContent = '$' + upper.toLocaleString();
+  document.getElementById('sim-range-low-mark').textContent = '▲ $' + lower.toLocaleString();
+  document.getElementById('sim-range-hi-mark').textContent = '▲ $' + upper.toLocaleString();
+
+  onPriceMove();
+  renderSimSteps();
+}
+
+function onPriceMove() {
+  const price = parseInt(document.getElementById('sim-price').value);
+  const lower = parseInt(document.getElementById('sim-lower').value);
+  const upper = parseInt(document.getElementById('sim-upper').value);
+  const deposit = parseFloat(document.getElementById('sim-deposit').value) || 10000;
+
+  document.getElementById('sim-price-display').textContent = '$' + price.toLocaleString();
+
+  const pos = getV3Position(price, lower, upper, deposit, ENTRY_PRICE);
+
+  // Tanks
+  const maxEth = deposit / lower; // rough max ETH possible
+  const ethPctTank = Math.min(95, Math.max(0, (pos.ethAmt / maxEth) * 100));
+  const usdcPctTank = Math.min(95, Math.max(0, (pos.usdcAmt / deposit) * 100));
+  document.getElementById('sim-eth-liq').style.height = ethPctTank + '%';
+  document.getElementById('sim-usdc-liq').style.height = usdcPctTank + '%';
+  document.getElementById('sim-eth-label').textContent = pos.ethAmt.toFixed(2);
+  document.getElementById('sim-usdc-label').textContent = pos.usdcAmt.toLocaleString(undefined,{maximumFractionDigits:0});
+
+  // Ratio bar
+  const ethP = Math.max(0, Math.min(100, pos.ethPct));
+  document.getElementById('ratio-eth').style.width = ethP + '%';
+  document.getElementById('ratio-usdc').style.width = (100 - ethP) + '%';
+  document.getElementById('ratio-eth-pct').textContent = Math.round(ethP) + '% ETH';
+  document.getElementById('ratio-usdc-pct').textContent = Math.round(100 - ethP) + '% USDC';
+
+  // Values
+  document.getElementById('sv-eth').textContent = pos.ethAmt.toFixed(4);
+  document.getElementById('sv-eth-usd').textContent = pos.ethValue.toLocaleString(undefined,{maximumFractionDigits:0});
+  document.getElementById('sv-usdc').textContent = pos.usdcAmt.toLocaleString(undefined,{maximumFractionDigits:2});
+  document.getElementById('sv-total').textContent = '$' + pos.totalValue.toLocaleString(undefined,{maximumFractionDigits:0});
+
+  // Status
+  const statusEl = document.getElementById('sim-status');
+  if (pos.inRange) {
+    statusEl.className = 'status-badge status-in';
+    statusEl.textContent = '✅ В диапазоне — зарабатываешь комиссии';
+  } else if (price >= upper) {
+    statusEl.className = 'status-badge status-out';
+    statusEl.textContent = '❌ Выше диапазона — 100% USDC, комиссии = 0';
+  } else {
+    statusEl.className = 'status-badge status-out';
+    statusEl.textContent = '❌ Ниже диапазона — 100% ETH, комиссии = 0';
+  }
+
+  // Formula
+  const sqrtP = Math.sqrt(price).toFixed(2);
+  const sqrtPa = Math.sqrt(lower).toFixed(2);
+  const sqrtPb = Math.sqrt(upper).toFixed(2);
+  document.getElementById('sim-formula').innerHTML = `
+    <div>Диапазон: <b>$${lower.toLocaleString()}</b> — <b>$${upper.toLocaleString()}</b></div>
+    <div>√Цена = √${price} = ${sqrtP}</div>
+    <div>√Нижняя = √${lower} = ${sqrtPa}</div>
+    <div>√Верхняя = √${upper} = ${sqrtPb}</div>
+    <div style="margin-top:6px; border-top:1px solid var(--border); padding-top:6px;">
+      ${pos.inRange ?
+        `ETH = L × (1/√P − 1/√Pb)<br>USDC = L × (√P − √Pa)` :
+        price >= upper ?
+          `Цена выше → весь ETH продан → 100% USDC` :
+          `Цена ниже → весь USDC потрачен → 100% ETH`
+      }
+    </div>
+  `;
+}
+
+function renderSimSteps() {
+  const cont = document.getElementById('sim-steps');
+  cont.innerHTML = SIM_STEPS.map((s, i) => {
+    let cls = '';
+    if (i < simCurrentStep) cls = 'done';
+    else if (i === simCurrentStep) cls = 'active';
+    return `<div class="sim-step ${cls}" id="sim-step-${i}"><div class="sim-step-num">${i+1}</div><div>${s.label}</div></div>`;
+  }).join('');
+}
+
+function runSimStep() {
+  simCurrentStep++;
+  if (simCurrentStep >= SIM_STEPS.length) {
+    simCurrentStep = SIM_STEPS.length - 1;
+    return;
+  }
+  const step = SIM_STEPS[simCurrentStep];
+  document.getElementById('sim-price').value = step.price;
+  onPriceMove();
+  renderSimSteps();
+
+  if (simCurrentStep >= SIM_STEPS.length - 1) {
+    document.getElementById('sim-step-btn').textContent = '✅ Готово';
+  }
+}
+
+function resetSim() {
+  simCurrentStep = -1;
+  document.getElementById('sim-price').value = 2500;
+  document.getElementById('sim-step-btn').textContent = '▶ Следующий шаг';
+  onPriceMove();
+  renderSimSteps();
+}
+
+// ============================================================
+// TAB 3: КАЛЬКУЛЯТОР
+// ============================================================
+function calcLFromActualDeposit(ethAmt, usdcAmt, entryPrice, lower, upper) {
+  // Given actual ETH + USDC deposited, entry price, and range — calculate L
+  // We calculate L from both token sides and average for stability
+  const sqrtP = Math.sqrt(entryPrice);
+  const sqrtPa = Math.sqrt(lower);
+  const sqrtPb = Math.sqrt(upper);
+
+  let L_eth = 0, L_usdc = 0, count = 0;
+
+  if (entryPrice <= lower) {
+    // All should be ETH
+    const denom = 1/sqrtPa - 1/sqrtPb;
+    if (denom > 0 && ethAmt > 0) return ethAmt / denom;
+    return 0;
+  }
+  if (entryPrice >= upper) {
+    // All should be USDC
+    const denom = sqrtPb - sqrtPa;
+    if (denom > 0 && usdcAmt > 0) return usdcAmt / denom;
+    return 0;
+  }
+
+  // In range — calc L from each side
+  const ethDenom = 1/sqrtP - 1/sqrtPb;
+  const usdcDenom = sqrtP - sqrtPa;
+
+  if (ethDenom > 0 && ethAmt > 0) { L_eth = ethAmt / ethDenom; count++; }
+  if (usdcDenom > 0 && usdcAmt > 0) { L_usdc = usdcAmt / usdcDenom; count++; }
+
+  if (count === 2) return (L_eth + L_usdc) / 2;
+  if (count === 1) return L_eth || L_usdc;
+  return 0;
+}
+
+function calcV3AtPrice(L, price, lower, upper) {
+  const sqrtP = Math.sqrt(price);
+  const sqrtPa = Math.sqrt(lower);
+  const sqrtPb = Math.sqrt(upper);
+
+  let ethAmt, usdcAmt;
+  if (price <= lower) {
+    ethAmt = L * (1/sqrtPa - 1/sqrtPb);
+    usdcAmt = 0;
+  } else if (price >= upper) {
+    ethAmt = 0;
+    usdcAmt = L * (sqrtPb - sqrtPa);
+  } else {
+    ethAmt = L * (1/sqrtP - 1/sqrtPb);
+    usdcAmt = L * (sqrtP - sqrtPa);
+  }
+
+  const ethValue = ethAmt * price;
+  const totalValue = ethValue + usdcAmt;
+  const ethPct = totalValue > 0 ? (ethValue / totalValue) * 100 : 0;
+  const inRange = price > lower && price < upper;
+
+  return { ethAmt, usdcAmt, ethValue, totalValue, ethPct, inRange };
+}
+
+function calcPosition() {
+  const ethIn = parseFloat(document.getElementById('calc-eth').value) || 0;
+  const usdcIn = parseFloat(document.getElementById('calc-usdc').value) || 0;
+  const entryPrice = parseFloat(document.getElementById('calc-entry-price').value) || 2500;
+  const lower = parseFloat(document.getElementById('calc-lower').value) || 2000;
+  const upper = parseFloat(document.getElementById('calc-upper').value) || 3000;
+
+  if (lower >= upper) return;
+  if (ethIn <= 0 && usdcIn <= 0) {
+    document.getElementById('calc-entry-info').innerHTML = '❌ Введи сколько внёс ETH и/или USDC';
+    return;
+  }
+
+  const L = calcLFromActualDeposit(ethIn, usdcIn, entryPrice, lower, upper);
+
+  if (L <= 0) {
+    document.getElementById('calc-entry-info').innerHTML = '❌ Проверь данные';
+    return;
+  }
+
+  const totalIn = ethIn * entryPrice + usdcIn;
+
+  // Entry info
+  document.getElementById('calc-entry-info').innerHTML = `
+    <div style="color:var(--text-dim); font-size:11px; margin-bottom:4px;">📐 Расчёт при входе:</div>
+    <div><b>Цена входа:</b> <b style="color:#fff;">$${entryPrice.toLocaleString()}</b> за ETH</div>
+    <div><b>Внёс:</b> ${ethIn} ETH × $${entryPrice.toLocaleString()} = <b>$${(ethIn * entryPrice).toLocaleString(undefined,{maximumFractionDigits:0})}</b> + ${usdcIn.toLocaleString()} USDC</div>
+    <div><b>Общая стоимость позиции:</b> <b style="color:var(--accent);">$${totalIn.toLocaleString(undefined,{maximumFractionDigits:0})}</b></div>
+    <div><b>L</b> (ликвидность) = <b>${L.toFixed(2)}</b></div>
+  `;
+
+  // Current (at entry)
+  const cur = calcV3AtPrice(L, entryPrice, lower, upper);
+  document.getElementById('cc-price').textContent = '$' + entryPrice.toLocaleString();
+  document.getElementById('cc-eth').textContent = ethIn.toFixed(4);
+  document.getElementById('cc-eth-usd').textContent = (ethIn * entryPrice).toLocaleString(undefined,{maximumFractionDigits:0});
+  document.getElementById('cc-usdc').textContent = usdcIn.toLocaleString(undefined,{maximumFractionDigits:2});
+  document.getElementById('cc-total').textContent = '$' + totalIn.toLocaleString(undefined,{maximumFractionDigits:0});
+  document.getElementById('cc-ratio-eth').style.width = cur.ethPct + '%';
+  document.getElementById('cc-ratio-usdc').style.width = (100-cur.ethPct) + '%';
+  document.getElementById('cc-pct-eth').textContent = Math.round(cur.ethPct) + '% ETH';
+  document.getElementById('cc-pct-usdc').textContent = Math.round(100-cur.ethPct) + '% USDC';
+
+  // Upper boundary
+  const up = calcV3AtPrice(L, upper, lower, upper);
+  document.getElementById('cu-price').textContent = '$' + upper.toLocaleString();
+  document.getElementById('cu-eth').textContent = up.ethAmt.toFixed(4);
+  document.getElementById('cu-usdc').textContent = up.usdcAmt.toLocaleString(undefined,{maximumFractionDigits:2});
+  document.getElementById('cu-total').textContent = '$' + up.totalValue.toLocaleString(undefined,{maximumFractionDigits:0});
+  document.getElementById('cu-ratio-eth').style.width = '0%';
+  document.getElementById('cu-ratio-usdc').style.width = '100%';
+  document.getElementById('cu-pct-eth').textContent = '0% ETH';
+  document.getElementById('cu-pct-usdc').textContent = '100% USDC';
+  const upDiff = up.totalValue - totalIn;
+  document.getElementById('cu-diff').innerHTML = `vs вход: <b style="color:${upDiff >= 0 ? 'var(--green)' : 'var(--red)'}">${upDiff >= 0 ? '+' : ''}$${upDiff.toLocaleString(undefined,{maximumFractionDigits:0})}</b> (${((upDiff/totalIn)*100).toFixed(1)}%)`;
+
+  // Lower boundary
+  const dn = calcV3AtPrice(L, lower, lower, upper);
+  document.getElementById('cd-price').textContent = '$' + lower.toLocaleString();
+  document.getElementById('cd-eth').textContent = dn.ethAmt.toFixed(4);
+  document.getElementById('cd-eth-usd').textContent = (dn.ethAmt * lower).toLocaleString(undefined,{maximumFractionDigits:0});
+  document.getElementById('cd-usdc').textContent = dn.usdcAmt.toLocaleString(undefined,{maximumFractionDigits:2});
+  document.getElementById('cd-total').textContent = '$' + dn.totalValue.toLocaleString(undefined,{maximumFractionDigits:0});
+  document.getElementById('cd-ratio-eth').style.width = '100%';
+  document.getElementById('cd-ratio-usdc').style.width = '0%';
+  document.getElementById('cd-pct-eth').textContent = '100% ETH';
+  document.getElementById('cd-pct-usdc').textContent = '0% USDC';
+  const dnDiff = dn.totalValue - totalIn;
+  document.getElementById('cd-diff').innerHTML = `vs вход: <b style="color:${dnDiff >= 0 ? 'var(--green)' : 'var(--red)'}">${dnDiff >= 0 ? '+' : ''}$${dnDiff.toLocaleString(undefined,{maximumFractionDigits:0})}</b> (${((dnDiff/totalIn)*100).toFixed(1)}%)`;
+
+  calcCustom();
+}
+
+function calcCustom() {
+  const ethIn = parseFloat(document.getElementById('calc-eth').value) || 0;
+  const usdcIn = parseFloat(document.getElementById('calc-usdc').value) || 0;
+  const entryPrice = parseFloat(document.getElementById('calc-entry-price').value) || 2500;
+  const lower = parseFloat(document.getElementById('calc-lower').value) || 2000;
+  const upper = parseFloat(document.getElementById('calc-upper').value) || 3000;
+  const customPrice = parseFloat(document.getElementById('calc-custom-price').value) || 2500;
+
+  document.getElementById('calc-slider-display').textContent = '$' + customPrice.toLocaleString();
+
+  const L = calcLFromActualDeposit(ethIn, usdcIn, entryPrice, lower, upper);
+  if (L <= 0) return;
+
+  const totalIn = ethIn * entryPrice + usdcIn;
+  const pos = calcV3AtPrice(L, customPrice, lower, upper);
+  const diff = pos.totalValue - totalIn;
+  const inRange = customPrice > lower && customPrice < upper;
+
+  // Status
+  const statusEl = document.getElementById('calc-slider-status');
+  if (inRange) {
+    statusEl.className = 'status-badge status-in';
+    statusEl.textContent = '✅ В диапазоне — зарабатываешь комиссии';
+  } else if (customPrice >= upper) {
+    statusEl.className = 'status-badge status-out';
+    statusEl.textContent = '❌ Выше диапазона — 100% USDC, комиссии = 0';
+  } else {
+    statusEl.className = 'status-badge status-out';
+    statusEl.textContent = '❌ Ниже диапазона — 100% ETH, комиссии = 0';
+  }
+
+  // Tanks
+  const maxEth = L * (1/Math.sqrt(lower) - 1/Math.sqrt(upper));
+  const maxUsdc = L * (Math.sqrt(upper) - Math.sqrt(lower));
+  const ethPctTank = maxEth > 0 ? Math.min(95, Math.max(0, (pos.ethAmt / maxEth) * 95)) : 0;
+  const usdcPctTank = maxUsdc > 0 ? Math.min(95, Math.max(0, (pos.usdcAmt / maxUsdc) * 95)) : 0;
+  document.getElementById('cs-eth-liq').style.height = ethPctTank + '%';
+  document.getElementById('cs-usdc-liq').style.height = usdcPctTank + '%';
+  document.getElementById('cs-eth-label').textContent = pos.ethAmt.toFixed(2);
+  document.getElementById('cs-usdc-label').textContent = pos.usdcAmt.toLocaleString(undefined,{maximumFractionDigits:0});
+
+  // Ratio
+  document.getElementById('cs-ratio-eth').style.width = pos.ethPct + '%';
+  document.getElementById('cs-ratio-usdc').style.width = (100 - pos.ethPct) + '%';
+  document.getElementById('cs-pct-eth').textContent = Math.round(pos.ethPct) + '% ETH';
+  document.getElementById('cs-pct-usdc').textContent = Math.round(100 - pos.ethPct) + '% USDC';
+
+  // Result text
+  document.getElementById('calc-custom-result').innerHTML = `
+    <div>ETH: <b>${pos.ethAmt.toFixed(4)}</b> ($${pos.ethValue.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})})</div>
+    <div>USDC: <b>${pos.usdcAmt.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</b></div>
+    <div style="margin-top:8px; border-top:1px solid var(--border); padding-top:8px;">
+      Всего: <b style="font-size:18px;">$${pos.totalValue.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</b>
+      <span style="color:${diff >= 0 ? 'var(--green)' : 'var(--red)'}">(${diff >= 0 ? '+' : ''}$${diff.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})} / ${((diff/totalIn)*100).toFixed(1)}%)</span>
+    </div>
+  `;
+}
+
+// ============================================================
+// INIT
+// ============================================================
+updateV2V3();
+recalcSim();
+renderSimSteps();
+calcPosition();
+</script>
+</body>
+</html>

@@ -481,8 +481,6 @@
         Цена ETH: <b style="color:var(--yellow);" id="calc-slider-display">$2,500</b>
       </div>
       <div class="price-slider-wrap">
-        <div class="range-mark lower" id="cc-mark-lower" style="left:33.33%;"><div class="range-mark-line"></div><div class="range-mark-lbl" id="cc-mark-lower-lbl">$2,000</div></div>
-        <div class="range-mark upper" id="cc-mark-upper" style="left:55.56%;"><div class="range-mark-line"></div><div class="range-mark-lbl" id="cc-mark-upper-lbl">$3,000</div></div>
         <input type="range" class="price-slider" id="calc-custom-price" min="500" max="5000" value="2500" step="10" oninput="calcCustom()">
       </div>
       <div class="price-labels">
@@ -961,15 +959,6 @@ function calcCustom() {
   const customPrice = parseFloat(document.getElementById('calc-custom-price').value) || 2500;
 
   document.getElementById('calc-slider-display').textContent = '$' + customPrice.toLocaleString();
-
-  // Update range boundary markers on slider
-  const sMin = 500, sMax = 5000;
-  const lowerPct = Math.max(0, Math.min(100, ((lower - sMin) / (sMax - sMin)) * 100));
-  const upperPct = Math.max(0, Math.min(100, ((upper - sMin) / (sMax - sMin)) * 100));
-  const mLo = document.getElementById('cc-mark-lower');
-  const mHi = document.getElementById('cc-mark-upper');
-  if (mLo) { mLo.style.left = lowerPct + '%'; document.getElementById('cc-mark-lower-lbl').textContent = '$' + lower.toLocaleString(); }
-  if (mHi) { mHi.style.left = upperPct + '%'; document.getElementById('cc-mark-upper-lbl').textContent = '$' + upper.toLocaleString(); }
 
   const L = calcLFromActualDeposit(ethIn, usdcIn, entryPrice, lower, upper);
   if (L <= 0) return;

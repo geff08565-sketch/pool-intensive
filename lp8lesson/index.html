@@ -101,6 +101,10 @@
   .range-mark.upper .range-mark-line { background:var(--orange); }
   .range-mark.upper .range-mark-lbl { color:var(--orange); border:1px solid rgba(249,115,22,0.4); }
 
+  .scenario-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-top:24px; }
+  @media(max-width:760px) { .scenario-grid { grid-template-columns:1fr; gap:12px; } }
+  @media(max-width:760px) { .panel { padding:18px; } .config-row label { min-width:auto; } .scene { padding:16px; } .tab-content { padding:0 12px 32px; } }
+
   .position-display { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-top:24px; }
   @media(max-width:800px) { .position-display { grid-template-columns:1fr; } }
 
@@ -394,7 +398,7 @@
     </div>
 
     <!-- Результаты: 3 сценария -->
-    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-top:24px;">
+    <div class="scenario-grid">
 
       <!-- Текущее -->
       <div class="panel" id="calc-current" style="border-color:rgba(239,68,68,0.3);">

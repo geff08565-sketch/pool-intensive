@@ -28,7 +28,7 @@
   }
   body > * { position:relative; z-index:1; }
 
-  .header { text-align:center; padding:32px 20px 16px; }
+  .header { text-align:center; padding:calc(env(safe-area-inset-top, 0px) + 32px) 20px 16px; }
   .header .eyebrow { color:var(--accent); font-size:13px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:8px; display:flex; align-items:center; justify-content:center; gap:8px; }
   .header h1 { font-size:28px; font-weight:800; color:#ffffff; letter-spacing:-0.01em; text-shadow:0 2px 12px rgba(0,0,0,0.5); }
 
@@ -86,11 +86,20 @@
   .price-range-zone.in-range { background:rgba(34,197,94,0.15); border:1px solid rgba(34,197,94,0.3); }
   .price-range-zone.out-range { background:rgba(255,77,106,0.1); border:1px dashed rgba(255,77,106,0.3); }
 
-  .price-slider-wrap { margin:0 20px; }
+  .price-slider-wrap { margin:0 20px; position:relative; padding-top:22px; }
   .price-slider { width:100%; -webkit-appearance:none; height:6px; border-radius:3px; background:linear-gradient(90deg,var(--red),var(--yellow),var(--green),var(--yellow),var(--red)); outline:none; cursor:pointer; }
   .price-slider::-webkit-slider-thumb { -webkit-appearance:none; width:24px; height:24px; border-radius:50%; background:white; border:3px solid var(--accent); cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.3); }
 
   .price-labels { display:flex; justify-content:space-between; margin:4px 20px 0; font-size:11px; color:var(--text-dim); }
+
+  /* Range boundary markers on slider */
+  .range-mark { position:absolute; top:0; transform:translateX(-50%); pointer-events:none; z-index:2; }
+  .range-mark-line { width:2px; height:22px; margin:0 auto; }
+  .range-mark-lbl { font-size:10px; font-weight:700; text-align:center; white-space:nowrap; margin-top:-2px; padding:1px 4px; border-radius:3px; background:rgba(17,17,17,0.85); }
+  .range-mark.lower .range-mark-line { background:var(--green); }
+  .range-mark.lower .range-mark-lbl { color:var(--green); border:1px solid rgba(34,197,94,0.4); }
+  .range-mark.upper .range-mark-line { background:var(--orange); }
+  .range-mark.upper .range-mark-lbl { color:var(--orange); border:1px solid rgba(249,115,22,0.4); }
 
   .position-display { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-top:24px; }
   @media(max-width:800px) { .position-display { grid-template-columns:1fr; } }
@@ -472,6 +481,8 @@
         Цена ETH: <b style="color:var(--yellow);" id="calc-slider-display">$2,500</b>
       </div>
       <div class="price-slider-wrap">
+        <div class="range-mark lower" id="cc-mark-lower" style="left:33.33%;"><div class="range-mark-line"></div><div class="range-mark-lbl" id="cc-mark-lower-lbl">$2,000</div></div>
+        <div class="range-mark upper" id="cc-mark-upper" style="left:55.56%;"><div class="range-mark-line"></div><div class="range-mark-lbl" id="cc-mark-upper-lbl">$3,000</div></div>
         <input type="range" class="price-slider" id="calc-custom-price" min="500" max="5000" value="2500" step="10" oninput="calcCustom()">
       </div>
       <div class="price-labels">
@@ -950,6 +961,15 @@ function calcCustom() {
   const customPrice = parseFloat(document.getElementById('calc-custom-price').value) || 2500;
 
   document.getElementById('calc-slider-display').textContent = '$' + customPrice.toLocaleString();
+
+  // Update range boundary markers on slider
+  const sMin = 500, sMax = 5000;
+  const lowerPct = Math.max(0, Math.min(100, ((lower - sMin) / (sMax - sMin)) * 100));
+  const upperPct = Math.max(0, Math.min(100, ((upper - sMin) / (sMax - sMin)) * 100));
+  const mLo = document.getElementById('cc-mark-lower');
+  const mHi = document.getElementById('cc-mark-upper');
+  if (mLo) { mLo.style.left = lowerPct + '%'; document.getElementById('cc-mark-lower-lbl').textContent = '$' + lower.toLocaleString(); }
+  if (mHi) { mHi.style.left = upperPct + '%'; document.getElementById('cc-mark-upper-lbl').textContent = '$' + upper.toLocaleString(); }
 
   const L = calcLFromActualDeposit(ethIn, usdcIn, entryPrice, lower, upper);
   if (L <= 0) return;

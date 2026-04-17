@@ -103,6 +103,10 @@
 
   .scenario-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-top:24px; }
   @media(max-width:760px) { .scenario-grid { grid-template-columns:1fr; gap:12px; } }
+
+  .tanks-stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:20px; align-items:center; }
+  @media(max-width:760px) { .tanks-stats-grid { grid-template-columns:1fr; gap:12px; } }
+
   @media(max-width:760px) { .panel { padding:18px; } .config-row label { min-width:auto; } .scene { padding:16px; } .tab-content { padding:0 12px 32px; } }
 
   .position-display { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-top:24px; }
@@ -496,7 +500,7 @@
       </div>
 
       <!-- Бассейны + цифры -->
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:20px;">
+      <div class="tanks-stats-grid">
         <div style="text-align:center;">
           <div class="tank-pair">
             <div>
